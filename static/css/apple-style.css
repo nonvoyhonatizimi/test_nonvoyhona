@@ -68,7 +68,8 @@ body {
 
 /* Sidebar - Apple uslubida */
 .sidebar {
-    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
     background: var(--sidebar-bg);
     color: var(--sidebar-text);
     padding: 20px 16px !important;
@@ -78,6 +79,29 @@ body {
     width: 260px;
     z-index: 1000;
     overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar .nav {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin-bottom: 10px;
+}
+
+.sidebar .nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar .nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar .nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
 }
 
 .sidebar::-webkit-scrollbar {
