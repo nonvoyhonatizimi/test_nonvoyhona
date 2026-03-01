@@ -582,18 +582,12 @@ def driver_payments():
     """Haydovchi to'lovlari - faqat oldingi smenalar qarz to'lovlari"""
     from datetime import date, datetime, timedelta
     
-    # Hozirgi vaqtni tekshirish (ertalabki 5 da avtomatik yangilanmasligi uchun)
-    now = datetime.now()
-    is_early_morning = (now.hour == 5 and now.minute < 30)
+    # MUHIM: Faqat "Smena yopish" bosilganda yangilanadi
+    # Avtomatik yangilanish O'CHIRILDI - ertalabki 5 da ham yangilanmaydi
     
-    # Oxirgi yopilgan smenani topish
-    # Ertalabki 5 da avtomatik yangilanishni oldini olish uchun
-    if is_early_morning:
-        # Ertalabki 5 da - kechagi smenadan boshlash
-        yesterday = date.today() - timedelta(days=1)
-        last_closed_smena = DayStatus.query.filter_by(sana=yesterday, status='yopiq').order_by(DayStatus.yopilgan_vaqt.desc()).first()
-    else:
-        last_closed_smena = DayStatus.query.filter_by(status='yopiq').order_by(DayStatus.yopilgan_vaqt.desc()).first()
+    # Oxirgi yopilgan smenani topish (faqat admin "Smena yopish" bosganda yopiladi)
+    # Bu yerda avtomatik vaqt tekshiruvi YO'Q - faqat bazadagi smena holati asosida
+    last_closed_smena = DayStatus.query.filter_by(status='yopiq').order_by(DayStatus.yopilgan_vaqt.desc()).first()
     
     # Bugungi sana
     today = date.today()

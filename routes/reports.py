@@ -322,22 +322,17 @@ def daily_sales():
     """Bugungi sotuvlar - haydovchi hisoboti"""
     from datetime import date, datetime, timedelta
     
-    # Hozirgi vaqtni tekshirish (ertalabki 5 da avtomatik yangilanmasligi uchun)
-    now = datetime.now()
-    is_early_morning = (now.hour == 5 and now.minute < 30)
+    # MUHIM: Faqat "Smena yopish" bosilganda yangilanadi
+    # Avtomatik yangilanish O'CHIRILDI - ertalabki 5 da ham yangilanmaydi
     
     filter_date = date.today()
     
-    # Oxirgi yopilgan smenani topish
-    # Ertalabki 5 da avtomatik yangilanishni oldini olish uchun
-    if is_early_morning:
-        # Ertalabki 5 da - kechagi smenadan boshlash
-        yesterday = filter_date - timedelta(days=1)
-        last_closed_smena = DayStatus.query.filter_by(sana=yesterday, status='yopiq').order_by(DayStatus.smena.desc()).first()
-    else:
-        last_closed_smena = DayStatus.query.filter_by(sana=filter_date, status='yopiq').order_by(DayStatus.smena.desc()).first()
+    # Oxirgi yopilgan smenani topish (faqat admin "Smena yopish" bosganda yopiladi)
+    # Bu yerda avtomatik vaqt tekshiruvi YO'Q - faqat bazadagi smena holati asosida
+    last_closed_smena = DayStatus.query.filter_by(sana=filter_date, status='yopiq').order_by(DayStatus.smena.desc()).first()
     
     # Agar smena yopilgan bo'lsa, shu smenadan keyingi sotuvlarni olish
+    # Aks holda 1-smena dan boshlanadi (yangi kun)
     if last_closed_smena:
         current_smena = last_closed_smena.smena + 1
     else:
