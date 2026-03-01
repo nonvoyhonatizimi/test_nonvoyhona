@@ -581,16 +581,18 @@ def delete_transfer(id):
 def driver_payments():
     """Haydovchi to'lovlari - faqat oldingi smenalar qarz to'lovlari"""
     from datetime import date, datetime, timedelta
+    from models import uz_datetime
     
     # MUHIM: Faqat "Smena yopish" bosilganda yangilanadi
     # Avtomatik yangilanish O'CHIRILDI - ertalabki 5 da ham yangilanmaydi
+    # O'zbekiston vaqtidan foydalanish (UTC+5)
     
     # Oxirgi yopilgan smenani topish (faqat admin "Smena yopish" bosganda yopiladi)
     # Bu yerda avtomatik vaqt tekshiruvi YO'Q - faqat bazadagi smena holati asosida
     last_closed_smena = DayStatus.query.filter_by(status='yopiq').order_by(DayStatus.yopilgan_vaqt.desc()).first()
     
-    # Bugungi sana
-    today = date.today()
+    # Bugungi sana (O'zbekiston vaqti)
+    today = uz_datetime().date()
     
     # Haydovchi filter
     driver_id = request.args.get('driver_id', '')

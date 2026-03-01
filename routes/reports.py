@@ -321,11 +321,13 @@ def daily_transfers():
 def daily_sales():
     """Bugungi sotuvlar - haydovchi hisoboti"""
     from datetime import date, datetime, timedelta
+    from models import uz_datetime
     
     # MUHIM: Faqat "Smena yopish" bosilganda yangilanadi
     # Avtomatik yangilanish O'CHIRILDI - ertalabki 5 da ham yangilanmaydi
+    # O'zbekiston vaqtidan foydalanish (UTC+5)
     
-    filter_date = date.today()
+    filter_date = uz_datetime().date()
     
     # Oxirgi yopilgan smenani topish (faqat admin "Smena yopish" bosganda yopiladi)
     # Bu yerda avtomatik vaqt tekshiruvi YO'Q - faqat bazadagi smena holati asosida
