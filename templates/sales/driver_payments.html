@@ -96,8 +96,6 @@
                         <td>
                             {% if p.driver %}
                                 <span class="badge bg-primary">{{ p.driver.ism }}</span>
-                            {% elif p.sale and p.sale.xodim %}
-                                <span class="badge bg-secondary">{{ p.sale.xodim }}</span>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
