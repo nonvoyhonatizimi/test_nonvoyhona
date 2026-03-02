@@ -3,11 +3,6 @@
 {% block title %}Qarz to'lovlari - Nonvoyhona Tizimi{% endblock %}
 {% block header_title %}Qarz to'lovlari{% endblock %}
 
-{% block extra_head %}
-<!-- Avtomatik yangilanish - har 30 soniyada -->
-<meta http-equiv="refresh" content="30">
-{% endblock %}
-
 {% block content %}
 <!-- Filter -->
 <div class="card mb-4">
@@ -16,7 +11,7 @@
             <i class="fas fa-info-circle"></i> Bu yerda <strong>oldingi kunlarning</strong> qarz to'lovlari ko'rsatiladi. Bugungi naqt to'lovlar "Bugungi sotuvlar" da hisoblanadi.
         </div>
         <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="driver_id" class="form-label">Haydovchi</label>
                 <select class="form-select" id="driver_id" name="driver_id">
                     <option value="">Barcha</option>
@@ -25,14 +20,23 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status" name="status">
                     <option value="tolandi" {% if status != 'kutilmoqda' %}selected{% endif %}>To'langan</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+            <div class="col-md-3">
+                {% if current_user.rol == 'admin' %}
+                <form method="POST" action="{{ url_for('sales.refresh_driver_payments') }}" onsubmit="return confirm('Qarz to\'lovlari yangilanadi! Barcha ma\'lumotlar boshidan boshlanadi. Davom etishmi?');">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="fas fa-sync-alt"></i> Yangilash
+                    </button>
+                </form>
+                {% endif %}
             </div>
         </form>
 
@@ -64,6 +68,8 @@
                         <th>Berilgan sana</th>
                         <th>Mijoz</th>
                         <th>Non turi</th>
+                        <th>Nonni bergan</th>
+                        <th>Pulni olgan</th>
                         <th>Qarz miqdori</th>
                         <th>To'langan</th>
                         <th>Qolgan qarz</th>
@@ -80,6 +86,22 @@
                         </td>
                         <td>{{ p.mijoz.nomi if p.mijoz else 'Noma\'lum' }}</td>
                         <td>{{ p.sale.non_turi if p.sale else 'Noma\'lum' }}</td>
+                        <td>
+                            {% if p.sale and p.sale.xodim %}
+                                <span class="badge bg-info">{{ p.sale.xodim }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.driver %}
+                                <span class="badge bg-primary">{{ p.driver.ism }}</span>
+                            {% elif p.sale and p.sale.xodim %}
+                                <span class="badge bg-secondary">{{ p.sale.xodim }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                         <td>{{ "{:,.0f}".format(p.sale.qoldiq_qarz + p.summa) if p.sale else '0' }} so'm</td>
                         <td><strong class="text-success">{{ "{:,.0f}".format(p.summa) }} so'm</strong></td>
                         <td>{{ "{:,.0f}".format(p.sale.qoldiq_qarz) if p.sale else '0' }} so'm</td>
@@ -91,7 +113,7 @@
                     {% endif %}
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">Qarz to'lovlari topilmadi</td>
+                        <td colspan="9" class="text-center text-muted py-4">Qarz to'lovlari topilmadi</td>
                     </tr>
                     {% endfor %}
                 </tbody>

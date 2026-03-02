@@ -637,6 +637,37 @@ def driver_payments():
                          jami_kutilmoqda=jami_kutilmoqda,
                          jami_tolandan=jami_tolandan)
 
+@sales_bp.route('/driver-payments/refresh', methods=['POST'])
+@login_required
+def refresh_driver_payments():
+    """Qarz to'lovlari bo'limini yangilash - barcha ma'lumotlarni boshidan boshlash"""
+    if current_user.rol != 'admin':
+        flash('Bu funksiya faqat admin uchun!', 'error')
+        return redirect(url_for('sales.driver_payments'))
+    
+    from models import uz_datetime
+    from datetime import date
+    
+    today = date.today()
+    
+    # Oxirgi yopilgan smenani topish
+    last_closed = DayStatus.query.filter_by(status='yopiq').order_by(DayStatus.smena.desc()).first()
+    current_smena = last_closed.smena + 1 if last_closed else 1
+    
+    # Yangi smena yaratish (faqat qarz to'lovlari uchun)
+    new_day_status = DayStatus(
+        sana=today,
+        smena=current_smena,
+        status='yopiq',
+        yopilgan_vaqt=uz_datetime(),
+        yopgan_admin=current_user.ism + ' (Qarz to\'lovlari yangilandi)'
+    )
+    db.session.add(new_day_status)
+    db.session.commit()
+    
+    flash(f'Qarz to\'lovlari yangilandi! Yangi smena: #{current_smena}', 'success')
+    return redirect(url_for('sales.driver_payments'))
+
 @sales_bp.route('/driver-payment/collect/<int:id>')
 @login_required
 def collect_payment(id):
