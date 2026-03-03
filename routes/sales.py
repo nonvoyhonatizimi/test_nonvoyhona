@@ -650,12 +650,12 @@ def driver_payments():
 @sales_bp.route('/driver-payments/refresh', methods=['POST'])
 @login_required
 def refresh_driver_payments():
-    """Qarz to'lovlari bo'limini yangilash - barcha ma'lumotlarni boshidan boshlash"""
+    """Qarz to'lovlari bo'limini yangilash - 'Smena yopish' kabi ishlaydi"""
     if current_user.rol != 'admin':
         flash('Bu funksiya faqat admin uchun!', 'error')
         return redirect(url_for('sales.driver_payments'))
     
-    from models import uz_datetime
+    from models import uz_datetime, DriverInventory, DriverPayment
     from datetime import date
     
     today = date.today()
@@ -664,7 +664,7 @@ def refresh_driver_payments():
     last_closed = DayStatus.query.filter_by(status='yopiq').order_by(DayStatus.smena.desc()).first()
     current_smena = last_closed.smena + 1 if last_closed else 1
     
-    # Yangi smena yaratish (faqat qarz to'lovlari uchun)
+    # Yangi smena yaratish (eski smenani yopib, yangisini ochish)
     new_day_status = DayStatus(
         sana=today,
         smena=current_smena,
@@ -673,9 +673,19 @@ def refresh_driver_payments():
         yopgan_admin=current_user.ism + ' (Qarz to\'lovlari yangilandi)'
     )
     db.session.add(new_day_status)
+    
+    # Haydovchi qoldiqlarini tozalash (smena yopilganda 0 dan boshlanadi)
+    DriverInventory.query.filter(DriverInventory.sana == today).delete()
+    
+    # Haydovchi to'lovlarini tozalash (smena yopilganda 0 dan boshlanadi)
+    DriverPayment.query.filter(
+        db.func.date(DriverPayment.created_at) == today,
+        DriverPayment.smena < current_smena
+    ).delete()
+    
     db.session.commit()
     
-    flash(f'Qarz to\'lovlari yangilandi! Yangi smena: #{current_smena}', 'success')
+    flash(f'Qarz to\'lovlari yangilandi! Yangi smena: #{current_smena}. Hisobotlar yangidan boshlandi.', 'success')
     return redirect(url_for('sales.driver_payments'))
 
 @sales_bp.route('/driver-payment/collect/<int:id>')
