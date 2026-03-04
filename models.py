@@ -207,7 +207,7 @@ class BreadTransfer(db.Model):
 class DriverPayment(db.Model):
     __tablename__ = 'haydovchi_tolovlari'
     id = db.Column(db.Integer, primary_key=True)
-    sale_id = db.Column(db.Integer, db.ForeignKey('sotuvlar.id'), nullable=False)
+    sale_id = db.Column(db.Integer, db.ForeignKey('sotuvlar.id', ondelete='CASCADE'), nullable=False)
     driver_id = db.Column(db.Integer, db.ForeignKey('xodimlar.id'), nullable=False)
     mijoz_id = db.Column(db.Integer, db.ForeignKey('mijozlar.id'), nullable=False)
     summa = db.Column(db.Numeric(10, 2), nullable=False)
