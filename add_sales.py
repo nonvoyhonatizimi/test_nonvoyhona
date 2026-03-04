@@ -98,12 +98,9 @@ def add_customers():
         
         print("=" * 60)
 
-def main():
-    """Barcha sotuvlarni qo'shish"""
+def add_all_sales():
+    """Barcha sotuvlarni qo'shish (mijozlar qo'shilgandan keyin)"""
     with app.app_context():
-        # Avval mijozlarni qo'shish
-        add_customers()
-        
         # Sotuvlar ro'yxati (skrinshotlardan)
         sales_data = [
             # Skrinshot 1
@@ -196,5 +193,25 @@ def main():
         print("TAYYOR! Barcha sotuvlar qo'shildi.")
         print("=" * 60)
 
+def main():
+    """Barcha ma'lumotlarni qo'shish"""
+    with app.app_context():
+        # 1. Avval mijozlarni qo'shish
+        add_customers()
+        
+        # 2. Keyin sotuvlarni qo'shish
+        add_all_sales()
+
+def main_customers_only():
+    """Faqat mijozlarni qo'shish"""
+    with app.app_context():
+        add_customers()
+
+def main_sales_only():
+    """Faqat sotuvlarni qo'shish (mijozlar mavjud bo'lsa)"""
+    with app.app_context():
+        add_all_sales()
+
 if __name__ == '__main__':
+    # Default: barchasini qo'shish
     main()
