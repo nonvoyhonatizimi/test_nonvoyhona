@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Qarz tahrirlash - Nonvoyhona Tizimi{% endblock %}
+{% block header_title %}Qarz tahrirlash{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">{{ customer.nomi }} - Qarzni tahrirlash</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="current_debt" class="form-label">Joriy qarz</label>
+                        <input type="text" class="form-control" id="current_debt" value="{{ "{:,.0f}".format(customer.jami_qarz) }} so'm" disabled>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="new_debt" class="form-label">Yangi qarz summasi (so'm)</label>
+                        <input type="number" class="form-control" id="new_debt" name="new_debt" 
+                               value="{{ customer.jami_qarz }}" min="0" step="1000" required>
+                        <div class="form-text">Yangi qarz summasini kiriting</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Saqlash</button>
+                        <a href="{{ url_for('reports.customer_debts') }}" class="btn btn-light">Bekor qilish</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -168,6 +168,30 @@ Qarz tafsiloti:
     
     return redirect(url_for('reports.customer_debts'))
 
+@reports_bp.route('/edit-debt/<int:customer_id>', methods=['GET', 'POST'])
+@login_required
+def edit_debt(customer_id):
+    """Mijoz qarzini tahrirlash (faqat admin)"""
+    if current_user.rol != 'admin':
+        flash('Bu funksiya faqat admin uchun!', 'error')
+        return redirect(url_for('reports.customer_debts'))
+    
+    customer = Customer.query.get_or_404(customer_id)
+    
+    if request.method == 'POST':
+        from decimal import Decimal
+        new_debt = Decimal(str(request.form.get('new_debt', 0)))
+        
+        # Eski qarzni hisobga olib, yangilash
+        old_debt = customer.jami_qarz
+        customer.jami_qarz = new_debt
+        
+        db.session.commit()
+        flash(f'{customer.nomi} qarzi {float(old_debt):,.0f} dan {float(new_debt):,.0f} so\'m ga yangilandi!', 'success')
+        return redirect(url_for('reports.customer_debts'))
+    
+    return render_template('reports/edit_debt.html', customer=customer)
+
 @reports_bp.route('/daily-production')
 @login_required
 def daily_production():

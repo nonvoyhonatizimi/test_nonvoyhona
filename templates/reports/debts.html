@@ -37,6 +37,12 @@
                         <h4 class="text-danger mb-0">{{ "{:,.0f}".format(item.customer.jami_qarz) }} so'm</h4>
                         <small class="text-muted">Umumiy qarz</small>
                     </div>
+                    {% if current_user.rol == 'admin' %}
+                    <a href="{{ url_for('reports.edit_debt', customer_id=item.customer.id) }}" 
+                       class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit me-1"></i>Tahrirlash
+                    </a>
+                    {% endif %}
                     {% if item.has_telegram %}
                     <a href="{{ url_for('reports.send_debt_notification', customer_id=item.customer.id) }}" 
                        class="btn btn-primary btn-sm"
