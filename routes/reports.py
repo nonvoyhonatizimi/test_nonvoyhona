@@ -421,13 +421,29 @@ def daily_sales():
 @reports_bp.route('/close-day', methods=['POST'])
 @login_required
 def close_day():
-    """Hisobotlarni yangilash - Sotuvlarni o'chirmaydi (faqat admin)"""
+    """Yangi smena yaratish - Eski sotuvlar o'chmaydi, yangi smena 0 dan boshlanadi (faqat admin)"""
     if current_user.rol != 'admin':
         flash('Bu funksiya faqat admin uchun!', 'error')
         return redirect(url_for('reports.daily_sales'))
     
-    # SOTUVLAR O'CHIRILMAYDI!
-    # Faqat hisobotlar yangilanadi
+    from datetime import date
+    from models import uz_datetime
+    today = date.today()
     
-    flash('Hisobotlar yangilandi! Sotuvlar saqlanib qoldi.', 'success')
+    # Oxirgi smenani topish
+    last_smena = DayStatus.query.filter_by(sana=today).order_by(DayStatus.smena.desc()).first()
+    current_smena = last_smena.smena + 1 if last_smena else 1
+    
+    # Yangi smena yaratish
+    new_day_status = DayStatus(
+        sana=today,
+        smena=current_smena,
+        status='ochiq',
+        yopilgan_vaqt=None,
+        yopgan_admin=None
+    )
+    db.session.add(new_day_status)
+    db.session.commit()
+    
+    flash(f'Yangi smena #{current_smena} boshlandi! Eski sotuvlar saqlanib qoldi.', 'success')
     return redirect(url_for('reports.daily_sales'))
