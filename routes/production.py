@@ -263,8 +263,8 @@ def add_oven_transfer():
     
     if request.method == 'POST':
         try:
-            from_xodim_id = request.form.get('from_xodim_id')
-            to_xodim_id = request.form.get('to_xodim_id')
+            from_xodim_id = int(request.form.get('from_xodim_id', 0))
+            to_xodim_id = int(request.form.get('to_xodim_id', 0))
             
             # 4 ta non turini olish
             non_turlar = []
