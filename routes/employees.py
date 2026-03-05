@@ -100,6 +100,10 @@ def delete_employee(id):
     if user:
         db.session.delete(user)
     
+    # Xodimga bog'liq haydovchi qoldiqlarini o'chirish (CASCADE o'rniga)
+    from models import DriverInventory
+    DriverInventory.query.filter_by(driver_id=emp.id).delete()
+    
     db.session.delete(emp)
     db.session.commit()
     flash(f'{emp.ism} o\'chirildi', 'success')
