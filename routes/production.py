@@ -429,7 +429,7 @@ def add_un_qoldiq():
             un_turi=un_turi,
             qop_soni=qop_soni,
             izoh=izoh,
-            xodim_id=current_user.employee_id if current_user.employee_id else 1
+            xodim_id=current_user.employee_id if current_user.employee_id else None
         )
         db.session.add(new_un)
         db.session.commit()
