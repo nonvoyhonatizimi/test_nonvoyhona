@@ -53,14 +53,14 @@ def log_action(harakat, maumot=""):
 def index():
     # Redirect based on role/lavozim
     if current_user.rol != 'admin' and current_user.employee:
-        lavozim = current_user.employee.lavozim
-        if lavozim == 'Xamirchi':
+        lavozim = current_user.employee.lavozim.lower() if current_user.employee.lavozim else ''
+        if 'xamir' in lavozim:
             return redirect(url_for('production.list_dough'))
-        elif lavozim == 'Non yashovchi':
+        elif 'yasovchi' in lavozim or 'yashovchi' in lavozim:
             return redirect(url_for('production.list_bread'))
-        elif lavozim == 'Tandirchi':
+        elif 'tandir' in lavozim:
             return redirect(url_for('production.list_oven'))
-        elif lavozim == 'Haydovchi':
+        elif 'haydovchi' in lavozim:
             return redirect(url_for('sales.list_sales'))
     
     today = datetime.now().date()
