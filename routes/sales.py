@@ -260,16 +260,18 @@ def add_sale():
         jami = miqdor * narx
         qarz = jami - tolandi
         
-        # Inventory tekshirish - haydovchida yetarli non bormi?
+        # Inventory tekshirish - haydovchida yetarli non bormi? (barcha sanalar bo'yicha)
         if current_user.employee_id:
-            inventory = DriverInventory.query.filter_by(
+            from sqlalchemy import func
+            total_miqdor = db.session.query(
+                func.sum(DriverInventory.miqdor)
+            ).filter_by(
                 driver_id=current_user.employee_id,
-                non_turi=non_turi,
-                sana=datetime.now().date()
-            ).first()
+                non_turi=non_turi
+            ).scalar() or 0
             
-            if not inventory or inventory.miqdor < miqdor:
-                flash(f'Sizda yetarli {non_turi} yo\'q! Avval non oling.', 'error')
+            if total_miqdor < miqdor:
+                flash(f'Sizda yetarli {non_turi} yo\'q! (Mavjud: {total_miqdor} dona, Kerak: {miqdor} dona)', 'error')
                 return redirect(url_for('sales.add_sale'))
         
         # Oxirgi ochiq smenani topish (sana nazariga qaramay)
@@ -316,17 +318,30 @@ def add_sale():
         db.session.add(new_sale)
         db.session.commit()
         
-        # Inventorydan non ayirish
+        # Inventorydan non ayirish (eng yangi sanadan boshlab)
         if current_user.employee_id:
-            inventory = DriverInventory.query.filter_by(
+            remaining = miqdor
+            # Eng yangi sanalardan boshlab ayirish
+            inventories = DriverInventory.query.filter_by(
                 driver_id=current_user.employee_id,
-                non_turi=non_turi,
-                sana=datetime.now().date()
-            ).first()
+                non_turi=non_turi
+            ).order_by(DriverInventory.sana.desc()).all()
             
-            if inventory:
-                inventory.miqdor -= miqdor
-                inventory.updated_at = uz_datetime()
+            for inv in inventories:
+                if remaining <= 0:
+                    break
+                if inv.miqdor >= remaining:
+                    inv.miqdor -= remaining
+                    inv.updated_at = uz_datetime()
+                    remaining = 0
+                else:
+                    remaining -= inv.miqdor
+                    inv.miqdor = 0
+                    inv.updated_at = uz_datetime()
+            
+            if remaining > 0:
+                flash(f'Xatolik: {remaining} dona non ayrib bo\'lmadi!', 'error')
+            else:
                 db.session.commit()
         
         # Avtomatik Haydovchi to'lovi yaratish (agar qarz bo'lsa va haydovchi bo'lsa)
