@@ -190,6 +190,7 @@ def edit_bread(id):
     
     if request.method == 'POST':
         bread.non_turi = request.form.get('non_turi')
+        bread.hamir_kg = float(request.form.get('hamir_kg', 0) or 0)
         bread.chiqqan_non = int(request.form.get('chiqqan_non', 0))
         bread.brak = int(request.form.get('brak_non', 0))
         bread.sof_non = bread.chiqqan_non - bread.brak
