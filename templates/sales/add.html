@@ -38,12 +38,22 @@
                     </script>
                     <div class="mb-3">
                         <label for="non_turi" class="form-label">Non turi</label>
-                        <select class="form-select" id="non_turi" name="non_turi" required>
+                        <select class="form-select" id="non_turi" name="non_turi" required onchange="updatePrice()">
                             {% for bt in bread_types %}
-                            <option value="{{ bt.nomi }}">{{ bt.nomi }}</option>
+                            <option value="{{ bt.nomi }}" data-narx="{{ bt.narx or 0 }}">{{ bt.nomi }} ({{ "{:,.0f}".format(bt.narx or 0) }} so'm)</option>
                             {% endfor %}
                         </select>
                     </div>
+                    <script>
+                        function updatePrice() {
+                            var select = document.getElementById('non_turi');
+                            var option = select.options[select.selectedIndex];
+                            var narx = option.getAttribute('data-narx');
+                            document.getElementById('narx').value = narx;
+                        }
+                        // Sahifa yuklanganda birinchi non turining narxini qo'yish
+                        document.addEventListener('DOMContentLoaded', updatePrice);
+                    </script>
                     <div class="row mb-3">
                         <div class="col">
                             <label for="miqdor" class="form-label">Miqdor (dona)</label>

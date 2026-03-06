@@ -17,6 +17,7 @@ def add_bread_type():
     """Add new bread type"""
     if request.method == 'POST':
         nomi = request.form.get('nomi', '').strip()
+        narx = request.form.get('narx', 0)
         
         if not nomi:
             flash('Non turining nomini kiriting!', 'error')
@@ -28,7 +29,7 @@ def add_bread_type():
             flash(f'"{nomi}" allaqachon mavjud!', 'error')
             return redirect(url_for('bread_types.list_bread_types'))
         
-        new_bread_type = BreadType(nomi=nomi)
+        new_bread_type = BreadType(nomi=nomi, narx=narx)
         db.session.add(new_bread_type)
         db.session.commit()
         

@@ -21,6 +21,7 @@
                     <tr>
                         <th>#</th>
                         <th>Non turi</th>
+                        <th>Narxi (so'm)</th>
                         <th>Qo'shilgan sana</th>
                         <th>Amallar</th>
                     </tr>
@@ -30,6 +31,7 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td class="fw-bold">{{ bt.nomi }}</td>
+                        <td>{{ "{:,.0f}".format(bt.narx or 0) }}</td>
                         <td>{{ bt.created_at.strftime('%d.%m.%Y') if bt.created_at else '-' }}</td>
                         <td>
                             <a href="{{ url_for('bread_types.delete_bread_type', id=bt.id) }}" 
