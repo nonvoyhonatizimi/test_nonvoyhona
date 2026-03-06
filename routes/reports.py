@@ -72,8 +72,9 @@ def customer_debts():
     # Build report data
     report_data = []
     for customer in customers:
-        # Get sales breakdown by bread type
-        sales_breakdown = db.session.query(
+        # Get sales breakdown by DATE (sanalar bo'yicha)
+        sales_by_date = db.session.query(
+            Sale.sana,
             Sale.non_turi,
             func.sum(Sale.miqdor).label('total_miqdor'),
             func.sum(Sale.jami_summa).label('total_summa'),
@@ -82,7 +83,7 @@ def customer_debts():
         ).filter(
             Sale.mijoz_id == customer.id,
             Sale.qoldiq_qarz > 0
-        ).group_by(Sale.non_turi).all()
+        ).group_by(Sale.sana, Sale.non_turi).order_by(Sale.sana.desc()).all()
         
         # Check if customer has telegram group
         has_telegram = False
@@ -94,7 +95,7 @@ def customer_debts():
         
         report_data.append({
             'customer': customer,
-            'breakdown': sales_breakdown,
+            'sales_by_date': sales_by_date,
             'has_telegram': has_telegram
         })
     
