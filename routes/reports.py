@@ -417,10 +417,25 @@ def daily_sales():
         non_turlari[sale.non_turi]['miqdor'] += sale.miqdor
         non_turlari[sale.non_turi]['summa'] += sale.jami_summa
     
-    # Haydovchi inventory (non qoldig'i) - sana filtrisiz
-    driver_inventory = DriverInventory.query.order_by(
-        DriverInventory.driver_id, DriverInventory.non_turi
+    # Haydovchi inventory (non qoldig'i) - guruhlash va jamlash
+    from sqlalchemy import func
+    inventory_grouped = db.session.query(
+        DriverInventory.driver_id,
+        DriverInventory.non_turi,
+        func.sum(DriverInventory.miqdor).label('miqdor')
+    ).group_by(
+        DriverInventory.driver_id,
+        DriverInventory.non_turi
     ).all()
+    
+    driver_inventory = []
+    for item in inventory_grouped:
+        driver = Employee.query.get(item.driver_id)
+        driver_inventory.append({
+            'non_turi': item.non_turi,
+            'miqdor': item.miqdor,
+            'driver': driver
+        })
     
     # Kun holatini tekshirish - oxirgi smena
     day_status = DayStatus.query.order_by(DayStatus.id.desc()).first()
