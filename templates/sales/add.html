@@ -10,13 +10,32 @@
             <div class="card-body p-4">
                 <form method="POST">
                     <div class="mb-3">
+                        <label for="mijoz_search" class="form-label">Mijoz qidirish</label>
+                        <input type="text" class="form-control mb-2" id="mijoz_search" placeholder="Mijoz nomini yozing..." onkeyup="filterCustomers()">
                         <label for="mijoz_id" class="form-label">Mijoz</label>
-                        <select class="form-select" id="mijoz_id" name="mijoz_id" required>
+                        <select class="form-select" id="mijoz_id" name="mijoz_id" required size="8">
                             {% for customer in customers %}
-                            <option value="{{ customer.id }}">{{ customer.nomi }} (Qarz: {{ "{:,.0f}".format(customer.jami_qarz) }} so'm)</option>
+                            <option value="{{ customer.id }}" data-name="{{ customer.nomi.lower() }}">{{ customer.nomi }} (Qarz: {{ "{:,.0f}".format(customer.jami_qarz) }} so'm)</option>
                             {% endfor %}
                         </select>
                     </div>
+                    <script>
+                        function filterCustomers() {
+                            var input = document.getElementById('mijoz_search');
+                            var filter = input.value.toLowerCase();
+                            var select = document.getElementById('mijoz_id');
+                            var options = select.getElementsByTagName('option');
+                            
+                            for (var i = 0; i < options.length; i++) {
+                                var txtValue = options[i].getAttribute('data-name');
+                                if (txtValue.indexOf(filter) > -1) {
+                                    options[i].style.display = "";
+                                } else {
+                                    options[i].style.display = "none";
+                                }
+                            }
+                        }
+                    </script>
                     <div class="mb-3">
                         <label for="non_turi" class="form-label">Non turi</label>
                         <select class="form-select" id="non_turi" name="non_turi" required>
