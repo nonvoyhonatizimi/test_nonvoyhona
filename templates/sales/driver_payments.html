@@ -30,18 +30,21 @@
                 <button type="submit" class="btn btn-primary w-100">Filter</button>
             </div>
             <div class="col-md-3">
-                <a href="{{ url_for('sales.driver_payments') }}" class="btn btn-outline-success w-100 mb-2">
+                <a href="{{ url_for('sales.driver_payments') }}" class="btn btn-outline-success w-100">
                     <i class="fas fa-sync-alt"></i> Yangilash
                 </a>
-                {% if current_user.rol == 'admin' %}
-                <form method="POST" action="{{ url_for('sales.refresh_driver_payments') }}" onsubmit="return confirm('Eski qarz tollovlari tozalanadi. Davom etishmi?');">
-                    <button type="submit" class="btn btn-warning w-100">
-                        <i class="fas fa-broom"></i> Tozalash
-                    </button>
-                </form>
-                {% endif %}
             </div>
         </form>
+        
+        {% if current_user.rol == 'admin' %}
+        <div class="mt-3">
+            <form method="POST" action="{{ url_for('sales.refresh_driver_payments') }}" onsubmit="return confirm('Barcha qarz tollovlari tozalanadi. Davom etishmi?');">
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-broom"></i> Tozalash (Barchasini o'chirish)
+                </button>
+            </form>
+        </div>
+        {% endif %}
 
     </div>
 </div>
