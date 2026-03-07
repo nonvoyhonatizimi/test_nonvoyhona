@@ -198,44 +198,24 @@ def pay_debt(sale_id):
             )
             db.session.add(new_cash)
         
-        # Haydovchi to'lovini saqlash (faqat smena yopilgandan keyin olingan to'lovlar uchun)
-        # Avvalgi to'lovni tekshirish
+        # Haydovchi to'lovini saqlash
         driver_payment = DriverPayment.query.filter_by(sale_id=sale.id).first()
         
-        # Oxirgi smenani aniqlash
-        from datetime import date
-        today = date.today()
-        last_closed = DayStatus.query.filter_by(status='yopiq').order_by(DayStatus.yopilgan_vaqt.desc()).first()
-        current_smena = last_closed.smena + 1 if last_closed else 1
+        # Hozirgi ochiq smenani aniqlash
+        open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
+        current_smena = open_smena.smena if open_smena else 1
         
-        # Sale qaysi smenaga tegishli?
-        sale_smena = sale.smena if sale.smena else 1
+        print(f"[DEBUG pay_debt] Sale.smena={sale.smena}, current_smena={current_smena}")
         
-        # Faqat agar to'lov BOSHQA SMENADA olingan bo'lsa saqlash
-        # (Shu smena da non berildi + Shunga smena da pul olindi = Bugungi sotuvlarda)
-        # (Smena A da non berildi + Smena B da pul olindi = Qarz to'lovlari)
-        # MUHIM: To'lovni olgan hodim - current_user (kim to'lovni olsa, u saqlanadi)
-        if driver_payment and current_smena > sale_smena:
-            # Boshqa smenada olingan to'lov - Qarz to'lovlari ga
-            # To'lovni olgan hodim - current_user (kim olsa, u)
-            new_driver_payment = DriverPayment(
-                sale_id=sale.id,
-                driver_id=current_user.employee_id if current_user.employee_id else driver_payment.driver_id,
-                mijoz_id=sale.mijoz_id,
-                summa=payment,
-                smena=current_smena,
-                status='tolandi',
-                collected_at=uz_datetime()
-            )
-            db.session.add(new_driver_payment)
-        elif driver_payment and current_smena == sale_smena:
-            # Shu smenada olingan to'lov - faqat status ni yangilash
+        if driver_payment:
+            # Mavjud to'lovni yangilash - MUHIM: smena ni ham yangilaymiz!
             driver_payment.status = 'tolandi'
             driver_payment.collected_at = uz_datetime()
             driver_payment.summa = payment
-            # To'lovni olgan hodimni yangilash
+            driver_payment.smena = current_smena  # To'lov qilingan smena
             if current_user.employee_id:
                 driver_payment.driver_id = current_user.employee_id
+            print(f"[DEBUG pay_debt] Yangilandi: Sale.smena={sale.smena}, Payment.smena={current_smena}")
         
         db.session.commit()
         
