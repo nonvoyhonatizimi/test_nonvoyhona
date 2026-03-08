@@ -62,8 +62,9 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
     background-color: var(--bg-secondary);
     color: var(--text-primary);
-    line-height: 1.47059;
-    letter-spacing: -0.022em;
+    line-height: 1.5;
+    letter-spacing: -0.015em;
+    font-size: 16px;
 }
 
 /* Sidebar - Apple uslubida */
@@ -288,29 +289,29 @@ body.sidebar-hidden main {
 
 /* Jadvallar - Apple uslubida */
 .table {
-    font-size: 14px;
+    font-size: 16px;
     border-collapse: separate;
     border-spacing: 0;
 }
 
 .table thead th {
     background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    font-weight: 600;
-    font-size: 12px;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: 14px 16px;
+    padding: 16px;
     border: none;
-    border-bottom: 1px solid var(--apple-gray5);
+    border-bottom: 2px solid var(--apple-gray5);
 }
 
 .table tbody td {
-    padding: 16px;
+    padding: 18px 16px;
     border: none;
     border-bottom: 1px solid var(--apple-gray5);
     color: var(--text-primary);
-    font-weight: 400;
+    font-weight: 500;
 }
 
 .table tbody tr:hover {
@@ -323,10 +324,10 @@ body.sidebar-hidden main {
 
 /* Tugmalar - Apple uslubida */
 .btn {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 600;
     letter-spacing: -0.01em;
-    padding: 10px 20px;
+    padding: 12px 24px;
     border-radius: var(--radius-md);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
@@ -635,15 +636,19 @@ body.sidebar-hidden main {
 
 /* Responsive */
 @media (max-width: 768px) {
+    body {
+        font-size: 18px;
+    }
+
     .sidebar {
-        width: 260px;
+        width: 280px;
         position: fixed;
-        left: -260px;
+        left: -280px;
         z-index: 1100;
     }
     
     body.sidebar-hidden .sidebar {
-        left: -260px;
+        left: -280px;
     }
     
     body:not(.sidebar-hidden) .sidebar {
@@ -652,11 +657,49 @@ body.sidebar-hidden main {
 
     main {
         margin-left: 0 !important;
-        padding: 16px !important;
+        padding: 12px !important;
     }
     
     .navbar-brand {
+        font-size: 22px;
+    }
+
+    .card-header {
         font-size: 20px;
+        padding: 16px;
+    }
+
+    .table {
+        font-size: 17px;
+    }
+
+    .table thead th {
+        font-size: 14px;
+        padding: 12px;
+    }
+
+    .btn {
+        width: 100%;
+        margin-bottom: 8px;
+        padding: 14px;
+        font-size: 18px;
+    }
+
+    .form-control, .form-select {
+        font-size: 18px;
+        padding: 14px;
+    }
+
+    .stats-card h3 {
+        font-size: 36px;
+    }
+
+    .sidebar-toggle {
+        left: 280px;
+    }
+
+    body.sidebar-hidden .sidebar-toggle {
+        left: 0;
     }
 }
 
