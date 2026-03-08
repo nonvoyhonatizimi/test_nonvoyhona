@@ -63,6 +63,10 @@ def index():
         elif 'haydovchi' in lavozim:
             return redirect(url_for('sales.list_sales'))
     
+    # If it is a customer
+    if current_user.rol == 'customer' or current_user.customer_id:
+        return redirect(url_for('customer_portal.dashboard'))
+    
     today = datetime.now().date()
     
     # Stats
@@ -109,14 +113,8 @@ def logout():
     return redirect(url_for('login'))
 
 # Import and register blueprints for other modules
-from routes.employees import employees_bp
-from routes.customers import customers_bp
-from routes.production import production_bp
-from routes.sales import sales_bp
-from routes.finance import finance_bp
-from routes.reports import reports_bp
-from routes.bread_types import bread_types_bp
 from routes.payroll import payroll_bp
+from routes.customer_portal import customer_portal_bp
 app.register_blueprint(employees_bp)
 app.register_blueprint(customers_bp)
 app.register_blueprint(production_bp)
@@ -125,6 +123,7 @@ app.register_blueprint(finance_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(bread_types_bp)
 app.register_blueprint(payroll_bp)
+app.register_blueprint(customer_portal_bp)
 
 # Create database tables on startup
 def init_db():

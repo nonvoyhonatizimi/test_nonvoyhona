@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Mening kabinetim - Nonvoyhona Tizimi{% endblock %}
+{% block header_title %}Xush kelibsiz, {{ customer.nomi }}!{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white text-center p-3 mb-3">
+            <div class="card-body">
+                <h6 class="text-uppercase small mb-2">Umumiy xarid</h6>
+                <h3 class="fw-bold mb-0">{{ "{:,.0f}".format(total_spent) }} so'm</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white text-center p-3 mb-3">
+            <div class="card-body">
+                <h6 class="text-uppercase small mb-2">Jami to'langan</h6>
+                <h3 class="fw-bold mb-0">{{ "{:,.0f}".format(total_paid) }} so'm</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger text-white text-center p-3 mb-3">
+            <div class="card-body">
+                <h6 class="text-uppercase small mb-2">Hozirgi qarz</h6>
+                <h3 class="fw-bold mb-0">{{ "{:,.0f}".format(customer.jami_qarz) }} so'm</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 text-primary"><i class="fas fa-history me-2"></i> Xaridlar tarixi</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Sana</th>
+                        <th>Non turi</th>
+                        <th>Miqdor</th>
+                        <th>Narx</th>
+                        <th>Jami</th>
+                        <th>To'langan</th>
+                        <th class="pe-4">Qoldiq qarz</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in sales %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold">{{ sale.sana.strftime('%d.%m.%Y') }}</div>
+                            <small class="text-muted">{{ sale.created_at.strftime('%H:%M') if sale.created_at else '' }}</small>
+                        </td>
+                        <td><span class="badge bg-info text-dark">{{ sale.non_turi }}</span></td>
+                        <td>{{ sale.miqdor }} dona</td>
+                        <td>{{ "{:,.0f}".format(sale.narx_dona) }}</td>
+                        <td class="fw-bold">{{ "{:,.0f}".format(sale.jami_summa) }}</td>
+                        <td class="text-success">{{ "{:,.0f}".format(sale.tolandi) }}</td>
+                        <td>
+                            <span class="{% if sale.qoldiq_qarz > 0 %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                                {{ "{:,.0f}".format(sale.qoldiq_qarz) }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="fas fa-shopping-basket fa-3x text-light mb-3"></i>
+                            <p class="text-muted">Hozircha xaridlar mavjud emas</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -44,6 +44,22 @@
                         <input type="text" class="form-control" id="telegram_chat_id" name="telegram_chat_id" value="{{ customer.telegram_chat_id or '' }}" placeholder="-1234567890">
                         <div class="form-text">Mijozga sotuv haqida xabar yuborish uchun Telegram guruh ID si</div>
                     </div>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title">Mijoz kabineti (Kirish ma'lumotlari)</h6>
+                            <div class="mb-3">
+                                <label for="login" class="form-label">Login</label>
+                                <input type="text" class="form-control" id="login" name="login" value="{{ user.login if user else '' }}" placeholder="Kirish logini">
+                            </div>
+                            <div class="mb-0">
+                                <label for="parol" class="form-label">Yangi parol</label>
+                                <input type="password" class="form-control" id="parol" name="parol" placeholder="O'zgartirish uchun yozing">
+                                <div class="form-text">Bo'sh qoldirilsa o'zgarmaydi. Yangi mijoz uchun standart parol: 123456</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">Yangilash</button>
                         <a href="{{ url_for('customers.list_customers') }}" class="btn btn-light">Bekor qilish</a>

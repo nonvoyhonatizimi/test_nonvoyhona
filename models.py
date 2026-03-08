@@ -19,10 +19,12 @@ class User(UserMixin, db.Model):
     rol = db.Column(db.String(20), default='operator')
     ism = db.Column(db.String(100))
     employee_id = db.Column(db.Integer, db.ForeignKey('xodimlar.id'), nullable=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('mijozlar.id'), nullable=True)
     status = db.Column(db.String(20), default='active')
     created_at = db.Column(db.DateTime, default=uz_datetime)
     
     employee = db.relationship('Employee', backref=db.backref('user', uselist=False))
+    customer = db.relationship('Customer', backref=db.backref('user', uselist=False))
 
 class Employee(db.Model):
     __tablename__ = 'xodimlar'

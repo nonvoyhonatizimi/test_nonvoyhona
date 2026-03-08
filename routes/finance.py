@@ -15,9 +15,10 @@ def list_expenses():
 @login_required
 def add_expense():
     if request.method == 'POST':
+        from decimal import Decimal
         turi = request.form.get('turi')
-        miqdor = float(request.form.get('miqdor', 0))
-        narx = float(request.form.get('narx', 0))
+        miqdor = Decimal(str(request.form.get('miqdor', 0)))
+        narx = Decimal(str(request.form.get('narx', 0)))
         izoh = request.form.get('izoh')
         
         jami = miqdor * narx

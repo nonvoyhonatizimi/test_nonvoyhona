@@ -345,10 +345,10 @@ def add_sale():
             "mijoz": customer.nomi if customer else "Noma'lum",
             "non_turi": non_turi,
             "miqdor": miqdor,
-            "narx_dona": float(narx),
-            "jami_summa": float(jami),
-            "tolandi": float(tolandi),
-            "qarz": float(qarz),
+            "narx_dona": Decimal(str(narx)),
+            "jami_summa": Decimal(str(jami)),
+            "tolandi": Decimal(str(tolandi)),
+            "qarz": Decimal(str(qarz)),
             "xodim": current_user.ism
         }
         # Telegram xabarini alohida thread da yuborish (tezroq bo'lishi uchun)
@@ -450,17 +450,32 @@ def delete_sale(id):
         if cash_entry:
             db.session.delete(cash_entry)
     
-    # Delete related driver payment if exists (avval o'chirish kerak)
-    driver_payment = DriverPayment.query.filter_by(sale_id=sale.id).first()
-    if driver_payment:
-        db.session.delete(driver_payment)
-        db.session.commit()  # Avval DriverPayment ni saqlash
-    
+    # Nonni haydovchi inventorysiga qaytarish
+    if sale.xodim_id:
+        inventory = DriverInventory.query.filter_by(
+            driver_id=sale.xodim_id, 
+            non_turi=sale.non_turi,
+            sana=sale.sana
+        ).first()
+        
+        if inventory:
+            inventory.miqdor += sale.miqdor
+            inventory.updated_at = uz_datetime()
+        else:
+            # Agar shu sana uchun record bo'lmasa, yangi yaratish
+            new_inv = DriverInventory(
+                driver_id=sale.xodim_id,
+                non_turi=sale.non_turi,
+                miqdor=sale.miqdor,
+                sana=sale.sana
+            )
+            db.session.add(new_inv)
+
     # Endi sotuvni o'chirish
     sale = Sale.query.get_or_404(id)  # Yangidan olish (session yangilandi)
     db.session.delete(sale)
     db.session.commit()
-    flash('Sotuv ma\'lumoti o\'chirildi', 'success')
+    flash('Sotuv ma\'lumoti o\'chirildi va non inventoryga qaytarildi', 'success')
     return redirect(url_for('sales.list_sales'))
 
 # ========== HAYDOVCHI → HAYDOVCHI NON O'TKAZISH ==========
@@ -663,7 +678,7 @@ def driver_payments():
     drivers = Employee.query.filter_by(lavozim='Haydovchi', status='faol').all()
     
     # Jami hisoblar
-    jami_tolangan = sum([float(p.summa) for p in qarz_tolovlari])
+    jami_tolangan = sum([p.summa for p in qarz_tolovlari])
     
     return render_template('sales/driver_payments.html',
                          payments=qarz_tolovlari,

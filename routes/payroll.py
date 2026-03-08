@@ -25,11 +25,12 @@ def index():
     hisobot = []
     
     for emp in employees:
+        from decimal import Decimal
         ishchi_malumot = {
             'id': emp.id,
             'ism': emp.ism,
             'lavozim': emp.lavozim,
-            'stavka': float(emp.ish_haqqi_stavka) if emp.ish_haqqi_stavka else 0,
+            'stavka': Decimal(str(emp.ish_haqqi_stavka)) if emp.ish_haqqi_stavka else Decimal('0'),
             'ish_soni': 0,
             'jami_ish_haqqi': 0
         }
@@ -106,7 +107,8 @@ def detail(employee_id):
             ish_soni = sum([n.hamir_kg for n in nonlar])
         
         if ish_soni > 0:
-            ish_haqqi = ish_soni * float(emp.ish_haqqi_stavka) if emp.ish_haqqi_stavka else 0
+            from decimal import Decimal
+            ish_haqqi = Decimal(str(ish_soni)) * Decimal(str(emp.ish_haqqi_stavka or 0))
             jami_ish_haqqi += ish_haqqi
             kunlik_ish.append({
                 'sana': ish_kuni.strftime('%d.%m.%Y'),

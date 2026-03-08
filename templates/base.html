@@ -127,6 +127,14 @@
                         </a>
                     </li>
                     {% endif %}
+
+                    {% if current_user.customer_id %}
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('customer_portal.dashboard') }}">
+                            <i class="fas fa-user-circle"></i> Mening kabinetim
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
                 <div class="mt-auto p-3">
                     <a href="{{ url_for('logout') }}" class="nav-link text-danger">

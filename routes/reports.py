@@ -139,19 +139,19 @@ def pay_debt_by_date(customer_id):
         return redirect(url_for('reports.customer_debts'))
     
     # Barcha sotuvlarni to'langan deb belgilash
-    total_paid = 0
+    total_paid = Decimal('0')
     for sale in sales:
-        qarz = float(sale.qoldiq_qarz)
-        sale.tolandi = float(sale.tolandi or 0) + qarz
-        sale.qoldiq_qarz = 0
+        qarz = sale.qoldiq_qarz
+        sale.tolandi = (sale.tolandi or Decimal('0')) + qarz
+        sale.qoldiq_qarz = Decimal('0')
         total_paid += qarz
     
     # Mijozning jami qarzini yangilash
     customer = Customer.query.get(customer_id)
     if customer:
-        customer.jami_qarz = float(customer.jami_qarz or 0) - total_paid
+        customer.jami_qarz = (customer.jami_qarz or Decimal('0')) - total_paid
         if customer.jami_qarz < 0:
-            customer.jami_qarz = 0
+            customer.jami_qarz = Decimal('0')
     
     db.session.commit()
     
@@ -201,9 +201,9 @@ Qarz tafsiloti:
     
     for item in sales_breakdown:
         message += f"\n{item.non_turi}: {item.total_miqdor} dona"
-        message += f"\n   Jami: {float(item.total_summa):,.0f} so'm"
-        message += f"\n   To'landi: {float(item.total_tolandi):,.0f} so'm"
-        message += f"\n   Qarz: {float(item.total_qarz):,.0f} so'm\n"
+        message += f"\n   Jami: {Decimal(str(item.total_summa)):,.0f} so'm"
+        message += f"\n   To'landi: {Decimal(str(item.total_tolandi)):,.0f} so'm"
+        message += f"\n   Qarz: {Decimal(str(item.total_qarz)):,.0f} so'm\n"
     
     message += f"\nIltimos, kassa qiling!"
     

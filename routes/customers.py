@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Customer
+from models import db, Customer, User
 from datetime import datetime
 
 customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
@@ -41,6 +41,8 @@ def add_customer():
 @login_required
 def edit_customer(id):
     customer = Customer.query.get_or_404(id)
+    user = User.query.filter_by(customer_id=customer.id).first()
+    
     if request.method == 'POST':
         customer.nomi = request.form.get('nomi')
         customer.telefon = request.form.get('telefon')
@@ -51,8 +53,37 @@ def edit_customer(id):
         telegram_chat_id = request.form.get('telegram_chat_id', '').strip()
         customer.telegram_chat_id = telegram_chat_id if telegram_chat_id else None
         
+        # User account management
+        login_id = request.form.get('login', '').strip()
+        password = request.form.get('parol', '').strip()
+        
+        if login_id:
+            if not user:
+                # Create new user for customer
+                existing = User.query.filter_by(login=login_id).first()
+                if existing:
+                    flash('Bu login allaqachon band!', 'error')
+                else:
+                    new_user = User(
+                        login=login_id,
+                        parol=password if password else "123456",
+                        rol='customer',
+                        ism=customer.nomi,
+                        customer_id=customer.id
+                    )
+                    db.session.add(new_user)
+            else:
+                # Update existing user
+                existing = User.query.filter_by(login=login_id).first()
+                if existing and existing.id != user.id:
+                    flash('Bu login allaqachon band!', 'error')
+                else:
+                    user.login = login_id
+                    if password:
+                        user.parol = password
+        
         db.session.commit()
         flash('Mijoz ma\'lumotlari yangilandi', 'success')
         return redirect(url_for('customers.list_customers'))
     
-    return render_template('customers/edit.html', customer=customer)
+    return render_template('customers/edit.html', customer=customer, user=user)
