@@ -129,8 +129,12 @@ def list_sales():
         query = query.join(Customer).filter(Customer.nomi.ilike(f'%{customer_name}%'))
     
     if filter_date:
-        # Sana bo'yicha qidirish
-        query = query.filter(Sale.sana == filter_date)
+        # Sana bo'yicha qidirish (stringni datega o'tkazamiz)
+        try:
+            date_obj = datetime.strptime(filter_date, '%Y-%m-%d').date()
+            query = query.filter(Sale.sana == date_obj)
+        except ValueError:
+            pass
         
     sales = query.order_by(Sale.id.desc()).all()
     print(f"DEBUG: Jami sotuvlar soni: {len(sales)}, Filtrlangan: {customer_name}, {filter_date}")  # Debug log
