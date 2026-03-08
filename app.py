@@ -136,6 +136,15 @@ app.register_blueprint(customer_portal_bp)
 # Create database tables on startup
 def init_db():
     with app.app_context():
+        # First, try to add missing columns manualy (Migration)
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES mijozlar(id)"))
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Migration backup: {e}")
+
         db.create_all()
         
         # Create default admin if not exists
