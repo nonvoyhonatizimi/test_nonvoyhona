@@ -19,6 +19,7 @@
 </head>
 <body class="sidebar-hidden">
     {% if current_user.is_authenticated %}
+    <div class="sidebar-swipe-area" id="swipeArea"></div>
     <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle">
         <i class="fas fa-chevron-left"></i>
     </button>
@@ -194,21 +195,54 @@
     <script>
         function toggleSidebar() {
             document.body.classList.toggle('sidebar-hidden');
-            const toggleBtn = document.getElementById('sidebarToggle');
-            // State is managed by CSS classes, but we can add more logic here if needed
-            
-            // Optional: Save preference to localStorage
             const isHidden = document.body.classList.contains('sidebar-hidden');
             localStorage.setItem('sidebar_hidden', isHidden);
         }
 
-        // Initialize state from localStorage or default to hidden
+        // Swipe Detection
+        let touchstartX = 0;
+        let touchendX = 0;
+        let touchstartY = 0;
+        let touchendY = 0;
+
+        const swipeArea = document.getElementById('swipeArea');
+        const sidebar = document.querySelector('.sidebar');
+
+        function handleGesture() {
+            const deltaX = touchendX - touchstartX;
+            const deltaY = Math.abs(touchendY - touchstartY);
+            
+            // Faqat gorizontal surishni aniqlash (vertikal skrolga xalaqit bermaslik uchun)
+            if (deltaY < 50) { 
+                if (deltaX > 70) {
+                    // O'ngga surish -> Ochish
+                    document.body.classList.remove('sidebar-hidden');
+                    localStorage.setItem('sidebar_hidden', 'false');
+                } else if (deltaX < -70) {
+                    // Chapga surish -> Yopish
+                    document.body.classList.add('sidebar-hidden');
+                    localStorage.setItem('sidebar_hidden', 'true');
+                }
+            }
+        }
+
+        document.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+            touchstartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        document.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            touchendY = e.changedTouches[0].screenY;
+            handleGesture();
+        }, {passive: true});
+
+        // Initialize state
         document.addEventListener('DOMContentLoaded', function() {
             const savedState = localStorage.getItem('sidebar_hidden');
             if (savedState === 'false') {
                 document.body.classList.remove('sidebar-hidden');
             } else {
-                // Default to hidden as requested
                 document.body.classList.add('sidebar-hidden');
             }
         });
