@@ -41,6 +41,27 @@
         </div>
     </div>
     <div class="card-body">
+        <!-- Qidiruv va Filtr -->
+        <form method="GET" action="{{ url_for('sales.list_sales') }}" class="row g-3 mb-4">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="customer_name" class="form-control" placeholder="Mijoz ismi b-n qidirish..." value="{{ customer_name }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                    <input type="date" name="date" class="form-control" value="{{ filter_date }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Saralash
+                </button>
+            </div>
+        </form>
+
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead class="table-light">

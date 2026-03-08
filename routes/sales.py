@@ -119,16 +119,31 @@ Xodim: {sale_data['xodim']}
 @sales_bp.route('/')
 @login_required
 def list_sales():
-    sales = Sale.query.order_by(Sale.id.desc()).all()
-    print(f"DEBUG: Jami sotuvlar soni: {len(sales)}")  # Debug log
-    # Tandirchi o'tkazishlarini ham olish
-    tandir_transfers = BreadTransfer.query.filter_by(from_turi='tandirchi').order_by(BreadTransfer.created_at.desc()).all()
+    customer_name = request.args.get('customer_name', '')
+    filter_date = request.args.get('date', '')
+    
+    query = Sale.query
+    
+    if customer_name:
+        # Mijoz nomi bo'yicha qidirish
+        query = query.join(Customer).filter(Customer.nomi.ilike(f'%{customer_name}%'))
+    
+    if filter_date:
+        # Sana bo'yicha qidirish
+        query = query.filter(Sale.sana == filter_date)
+        
+    sales = query.order_by(Sale.id.desc()).all()
+    print(f"DEBUG: Jami sotuvlar soni: {len(sales)}, Filtrlangan: {customer_name}, {filter_date}")  # Debug log
+    
+    # Tandirchi o'tkazishlarini ham olish (Faqat filter yo'q bo'lsa yoki kerak bo'lsa, lekin foydalanuvchi hozircha faqat sotuvlar haqida so'radi)
+    tandir_transfers = BreadTransfer.query.filter_by(from_turi='tandirchi').order_by(BreadTransfer.created_at.desc()).limit(20).all()
+    
     # Haydovchi o'tkazishlarini faqat admin uchun olish
     haydovchi_transfers = None
     if current_user.rol == 'admin':
-        haydovchi_transfers = BreadTransfer.query.filter_by(from_turi='haydovchi').order_by(BreadTransfer.created_at.desc()).all()
-    # Haydovchi qoldiqlarini olish (tarqatish uchun non qoldig'i)
-    # Non turini guruhlash va jami miqdorni hisoblash
+        haydovchi_transfers = BreadTransfer.query.filter_by(from_turi='haydovchi').order_by(BreadTransfer.created_at.desc()).limit(20).all()
+        
+    # Haydovchi qoldiqlarini olish
     from models import DriverInventory, Employee
     from sqlalchemy import func
     
@@ -141,7 +156,6 @@ def list_sales():
         DriverInventory.non_turi
     ).all()
     
-    # Driver ma'lumotlarini qo'shish
     driver_inventory = []
     for item in inventory_grouped:
         driver = Employee.query.get(item.driver_id)
@@ -151,7 +165,13 @@ def list_sales():
             'driver': driver
         })
     
-    return render_template('sales/list.html', sales=sales, tandir_transfers=tandir_transfers, haydovchi_transfers=haydovchi_transfers, driver_inventory=driver_inventory)
+    return render_template('sales/list.html', 
+                         sales=sales, 
+                         tandir_transfers=tandir_transfers, 
+                         haydovchi_transfers=haydovchi_transfers, 
+                         driver_inventory=driver_inventory,
+                         customer_name=customer_name,
+                         filter_date=filter_date)
 
 @sales_bp.route('/pay-debt/<int:sale_id>', methods=['GET', 'POST'])
 @login_required
