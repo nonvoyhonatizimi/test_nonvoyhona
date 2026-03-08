@@ -28,50 +28,45 @@
                     <small class="text-muted">v3.0 Professional</small>
                 </div>
                 <ul class="nav flex-column">
-                    {% if current_user.rol == 'admin' %}
+                    {# 1. Bugungi sotuvlar #}
+                    {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim == 'Operator') %}
                     <li class="nav-item">
                         <a class="nav-link {% if 'reports.daily_sales' in request.endpoint or request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('reports.daily_sales') }}">
                             <i class="fas fa-chart-line"></i> Bugungi sotuvlar
                         </a>
                     </li>
+                    {% endif %}
+
+                    {# 2. Qarz to'lovlari #}
+                    {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim == 'Operator') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if 'employees' in request.endpoint %}active{% endif %}" href="{{ url_for('employees.list_employees') }}">
-                            <i class="fas fa-users"></i> Xodimlar
+                        <a class="nav-link {% if 'sales.driver_payments' in request.endpoint %}active{% endif %}" href="{{ url_for('sales.driver_payments') }}">
+                            <i class="fas fa-hand-holding-usd"></i> Qarz to'lovlari
                         </a>
                     </li>
+                    {% endif %}
+
+                    {# 3. Mijozlar qarzi #}
+                    {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim == 'Operator') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if 'customers' in request.endpoint %}active{% endif %}" href="{{ url_for('customers.list_customers') }}">
-                            <i class="fas fa-user-tie"></i> Mijozlar
+                        <a class="nav-link {% if 'reports.customer_debts' in request.endpoint %}active{% endif %}" href="{{ url_for('reports.customer_debts') }}">
+                            <i class="fas fa-user-clock"></i> Mijozlar qarzi
                         </a>
                     </li>
                     {% endif %}
 
                     <hr class="text-white-50">
-                    
+
+                    {# 4. Xamir #}
                     {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim in ['Xamirchi', 'Operator']) %}
                     <li class="nav-item">
-                        <a class="nav-link {% if 'production.list_dough' in request.endpoint or 'production.add_dough' in request.endpoint %}active{% endif %}" href="{{ url_for('production.list_dough') }}">
+                        <a class="nav-link {% if 'production.list_dough' in request.endpoint %}active{% endif %}" href="{{ url_for('production.list_dough') }}">
                             <i class="fas fa-bowl-rice"></i> Xamir
                         </a>
                     </li>
                     {% endif %}
 
-                    {% if current_user.rol == 'admin' %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'un_qoldiq' in request.endpoint %}active{% endif %}" href="{{ url_for('production.un_qoldiq_list') }}">
-                            <i class="fas fa-wheat-awn"></i> Un Qoldig'i
-                        </a>
-                    </li>
-                    {% endif %}
-
-                    {% if current_user.rol == 'admin' %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'payroll' in request.endpoint %}active{% endif %}" href="{{ url_for('payroll.index') }}">
-                            <i class="fas fa-money-bill-wave"></i> Ish Haqqi
-                        </a>
-                    </li>
-                    {% endif %}
-
+                    {# 5. Non yasash #}
                     {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim in ['Yasovchi', 'Operator']) %}
                     <li class="nav-item">
                         <a class="nav-link {% if 'production.list_bread' in request.endpoint %}active{% endif %}" href="{{ url_for('production.list_bread') }}">
@@ -80,6 +75,7 @@
                     </li>
                     {% endif %}
 
+                    {# 6. Tandir #}
                     {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim in ['Tandirchi', 'Operator']) %}
                     <li class="nav-item">
                         <a class="nav-link {% if 'production.list_oven' in request.endpoint %}active{% endif %}" href="{{ url_for('production.list_oven') }}">
@@ -88,38 +84,50 @@
                     </li>
                     {% endif %}
 
+                    {# 7. Sotuvlar #}
                     {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim in ['Haydovchi', 'Operator']) %}
                     <li class="nav-item">
-                        <a class="nav-link {% if 'sales' in request.endpoint %}active{% endif %}" href="{{ url_for('sales.list_sales') }}">
+                        <a class="nav-link {% if 'sales.list_sales' in request.endpoint %}active{% endif %}" href="{{ url_for('sales.list_sales') }}">
                             <i class="fas fa-shopping-cart"></i> Sotuvlar
                         </a>
                     </li>
                     {% endif %}
 
                     <hr class="text-white-50">
-                    
-                    {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim == 'Operator') %}
+
+                    {# 8. Un qoldig'i #}
+                    {% if current_user.rol == 'admin' %}
                     <li class="nav-item">
-                        <a class="nav-link {% if 'driver_payments' in request.endpoint %}active{% endif %}" href="{{ url_for('sales.driver_payments') }}">
-                            <i class="fas fa-hand-holding-usd"></i> Qarz to'lovlari
+                        <a class="nav-link {% if 'un_qoldiq' in request.endpoint %}active{% endif %}" href="{{ url_for('production.un_qoldiq_list') }}">
+                            <i class="fas fa-wheat-awn"></i> Un Qoldig'i
                         </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if 'reports' in request.endpoint %}active{% endif %}" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-chart-line"></i> Hisobotlar
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-dark">
-                            <li><a class="dropdown-item" href="{{ url_for('reports.daily_production') }}">Kunlik ishlab chiqarish</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('reports.employee_stats') }}">Xodimlar ishi</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('reports.customer_debts') }}">Mijozlar qarzi</a></li>
-                        </ul>
                     </li>
                     {% endif %}
 
-                    <hr class="text-white-50">
-                    
+                    {# 9. Xodimlar #}
                     {% if current_user.rol == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'employees' in request.endpoint %}active{% endif %}" href="{{ url_for('employees.list_employees') }}">
+                            <i class="fas fa-users"></i> Xodimlar
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {# 10. Ish haqqi #}
+                    {% if current_user.rol == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'payroll' in request.endpoint %}active{% endif %}" href="{{ url_for('payroll.index') }}">
+                            <i class="fas fa-money-bill-wave"></i> Ish Haqqi
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.rol == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'customers' in request.endpoint %}active{% endif %}" href="{{ url_for('customers.list_customers') }}">
+                            <i class="fas fa-user-tie"></i> Mijozlar
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link {% if 'bread_types' in request.endpoint %}active{% endif %}" href="{{ url_for('bread_types.list_bread_types') }}">
                             <i class="fas fa-bread-slice"></i> Non turlari
