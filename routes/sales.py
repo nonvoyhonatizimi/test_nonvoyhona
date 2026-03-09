@@ -458,7 +458,12 @@ def edit_sale(id):
 @login_required
 def delete_sale(id):
     from decimal import Decimal
+    from models import DriverPayment
     sale = Sale.query.get_or_404(id)
+    
+    # Haydovchi to'lovini (qarzini) o'chirish (Agar mavjud bo'lsa)
+    # Bu not-null constraint xatoligini oldini oladi
+    DriverPayment.query.filter_by(sale_id=sale.id).delete()
     
     # Update customer debt
     customer = Customer.query.get(sale.mijoz_id)

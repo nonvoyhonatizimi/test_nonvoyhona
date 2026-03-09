@@ -219,7 +219,7 @@ class DriverPayment(db.Model):
     created_at = db.Column(db.DateTime, default=uz_datetime)
     collected_at = db.Column(db.DateTime, nullable=True)
     
-    sale = db.relationship('Sale', backref='driver_payment', passive_deletes=True)
+    sale = db.relationship('Sale', backref=db.backref('driver_payment', cascade='all, delete-orphan', passive_deletes=True))
     driver = db.relationship('Employee', backref='payments')
     mijoz = db.relationship('Customer', backref='driver_payments')
 
