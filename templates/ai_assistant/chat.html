@@ -37,9 +37,12 @@
             </div>
 
             <div class="card-footer bg-white border-top p-3">
-                <form id="chat-form" class="input-group">
+                <form id="chat-form" class="input-group align-items-center">
+                    <button type="button" id="voice-btn" class="btn btn-outline-secondary rounded-circle me-2" style="width: 45px; height: 45px;">
+                        <i class="fas fa-microphone"></i>
+                    </button>
                     <input type="text" id="user-input" class="form-control border-0 bg-light p-3 rounded-pill me-2" 
-                           placeholder="Savolingizni yozing..." autocomplete="off">
+                           placeholder="Savolingizni yozing yoki gapiring..." autocomplete="off">
                     <button type="submit" class="btn btn-primary rounded-circle" style="width: 50px; height: 50px;">
                         <i class="fas fa-paper-plane"></i>
                     </button>
@@ -56,12 +59,49 @@
     #chat-messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     .msg-user { align-self: flex-end; background: #007AFF; color: white; border-bottom-right-radius: 2px !important; }
     .msg-ai { align-self: flex-start; background: white; color: #333; border-bottom-left-radius: 2px !important; }
+    .recording { color: red !important; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 </style>
 
 <script>
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const userInput = document.getElementById('user-input');
+    const voiceBtn = document.getElementById('voice-btn');
+
+    // Text to Speech
+    function speak(text) {
+        // Taglarni olib tashlash
+        const cleanText = text.replace(/<\/?[^>]+(>|$)/g, "");
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'uz-UZ'; // O'zbek tili (agar qo'llab quvvatlasa)
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // Speech Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'uz-UZ';
+        
+        voiceBtn.addEventListener('click', () => {
+            recognition.start();
+            voiceBtn.classList.add('recording');
+        });
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            userInput.value = transcript;
+            voiceBtn.classList.remove('recording');
+            chatForm.dispatchEvent(new Event('submit'));
+        };
+
+        recognition.onerror = () => {
+            voiceBtn.classList.remove('recording');
+        };
+    } else {
+        voiceBtn.style.display = 'none';
+    }
 
     function addMessage(content, isUser = false) {
         const div = document.createElement('div');
@@ -113,6 +153,7 @@
             
             chatMessages.removeChild(typingDiv);
             addMessage(data.answer);
+            speak(data.answer); // Javobni ovoz chiqarib aytish
         } catch (error) {
             chatMessages.removeChild(typingDiv);
             addMessage("Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.");
