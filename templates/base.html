@@ -141,6 +141,16 @@
                     </li>
                     {% endif %}
 
+                    {# 11. Sun'iy Intellekt #}
+                    {% if current_user.rol == 'admin' %}
+                    <li class="nav-item mt-2">
+                        <a class="nav-link {% if 'ai_assistant' in request.endpoint %}active{% endif %}" href="{{ url_for('ai_assistant.chat') }}" 
+                           style="background: linear-gradient(45deg, rgba(0, 122, 255, 0.1), rgba(0, 198, 255, 0.1)); border-radius: 12px;">
+                            <i class="fas fa-robot text-primary"></i> <span class="fw-bold">Sun'iy Intellekt (AI)</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
                     {% if current_user.customer_id %}
                     <li class="nav-item">
                         <a class="nav-link active" href="{{ url_for('customer_portal.dashboard') }}">
