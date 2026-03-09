@@ -71,11 +71,34 @@
 
     // Text to Speech
     function speak(text) {
-        // Taglarni olib tashlash
-        const cleanText = text.replace(/<\/?[^>]+(>|$)/g, "");
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = 'uz-UZ'; // O'zbek tili (agar qo'llab quvvatlasa)
-        window.speechSynthesis.speak(utterance);
+        // Avvalgi ovozni to'xtatish
+        window.speechSynthesis.cancel();
+
+        // Taglarni va belgilarni to'liq olib tashlash
+        let cleanText = text.replace(/<\/?[^>]+(>|$)/g, "");
+        cleanText = cleanText.replace(/[#*`_~]/g, ""); // Markdown belgilari
+        cleanText = cleanText.replace(/&nbsp;/g, " ");
+
+        // Matnni qismlarga bo'lish (uzun matnlarda uzilish bo'lmasligi uchun)
+        const chunks = cleanText.match(/.{1,200}(\s|$)/g) || [cleanText];
+        
+        chunks.forEach(chunk => {
+            const utterance = new SpeechSynthesisUtterance(chunk.trim());
+            
+            // O'zbek tili ovozini qidirish
+            const voices = window.speechSynthesis.getVoices();
+            const uzVoice = voices.find(v => v.lang.startsWith('uz') || v.name.includes('Uzbek'));
+            
+            if (uzVoice) {
+                utterance.voice = uzVoice;
+            }
+            
+            utterance.lang = 'uz-UZ';
+            utterance.rate = 1.0; // Tezlik
+            utterance.pitch = 1.0; // Ohang
+            
+            window.speechSynthesis.speak(utterance);
+        });
     }
 
     // Speech Recognition
