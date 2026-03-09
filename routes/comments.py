@@ -67,3 +67,19 @@ def index():
                            customers=customers, 
                            selected_customer=selected_customer, 
                            chat_history=chat_history)
+
+@comments_bp.route('/delete/<int:id>')
+@login_required
+def delete_comment(id):
+    if current_user.rol != 'admin':
+        flash("Ruxsat berilmagan", "error")
+        return redirect(url_for('index'))
+    
+    comment = CustomerComment.query.get_or_404(id)
+    customer_id = comment.customer_id
+    
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Xabar o'chirildi", "success")
+    
+    return redirect(url_for('comments.index', customer_id=customer_id))

@@ -59,7 +59,17 @@
                                     {% if comment.is_from_admin %}Admin{% else %}Siz{% endif %} 
                                     <span class="ms-2" style="font-size: 0.7rem;">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
                                 </div>
-                                <div style="font-size: 0.95rem;">{{ comment.matn }}</div>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div style="font-size: 0.95rem;">{{ comment.matn }}</div>
+                                    {% if not comment.is_from_admin %}
+                                    <a href="{{ url_for('customer_portal.delete_comment', id=comment.id) }}" 
+                                       class="ms-2 text-white opacity-50 hover-opacity-100" 
+                                       onclick="return confirm('Ushbu xabarni o\'chirmoqchimisiz?')"
+                                       style="font-size: 0.8rem; text-decoration: none;">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         {% endfor %}

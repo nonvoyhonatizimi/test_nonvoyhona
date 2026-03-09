@@ -52,6 +52,25 @@ def add_comment():
         
     return redirect(url_for('customer_portal.dashboard'))
 
+@customer_portal_bp.route('/delete_comment/<int:id>')
+@login_required
+def delete_comment(id):
+    if not current_user.customer_id:
+        return redirect(url_for('index'))
+    
+    from models import CustomerComment
+    comment = CustomerComment.query.get_or_404(id)
+    
+    # Mijoz faqat o'zi yuborgan xabarni o'chirishi mumkin
+    if comment.customer_id == current_user.customer_id and not comment.is_from_admin:
+        db.session.delete(comment)
+        db.session.commit()
+        flash('Xabar o\'chirildi', 'success')
+    else:
+        flash("Bu xabarni o'chirishga ruxsatingiz yo'q", 'error')
+        
+    return redirect(url_for('customer_portal.dashboard'))
+
 @customer_portal_bp.route('/sale/<int:id>')
 @login_required
 def sale_detail(id):
