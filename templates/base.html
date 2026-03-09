@@ -2,10 +2,13 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Nonvoyhona Tizimi{% endblock %}</title>
     <meta name="theme-color" content="#007AFF">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nonvoyhona">
+    <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
     {% block extra_head %}{% endblock %}
@@ -198,6 +201,28 @@
         </div>
     </div>
 
+    <!-- iOS Install Prompt -->
+    <div id="ios-prompt">
+        <button class="close-prompt" onclick="hideIosPrompt()">&times;</button>
+        <div class="prompt-header">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="App Icon" class="app-icon">
+            <div class="app-info">
+                <h5>Nonvoyhona Tizimi</h5>
+                <p>Ilovani o'rnatish uchun:</p>
+            </div>
+        </div>
+        <ul class="steps">
+            <li>
+                <div class="share-icon"><i class="fas fa-share-square"></i></div>
+                <span>"Share" (ulashish) tugmasini bosing</span>
+            </li>
+            <li>
+                <div class="plus-icon"><i class="fas fa-plus"></i></div>
+                <span>"Add to Home Screen" (Ekraningizga qo'shish) ni tanlang</span>
+            </li>
+        </ul>
+    </div>
+
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -253,7 +278,35 @@
             } else {
                 document.body.classList.add('sidebar-hidden');
             }
+
+            // PWA Service Worker Registration
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registered', reg))
+                    .catch(err => console.log('SW error', err));
+            }
+
+            // Detect iOS and show install prompt
+            const isIos = () => {
+                const userAgent = window.navigator.userAgent.toLowerCase();
+                return /iphone|ipad|ipod/.test(userAgent);
+            };
+            const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+            if (isIos() && !isInStandaloneMode()) {
+                const promptShown = localStorage.getItem('ios_prompt_shown');
+                if (!promptShown) {
+                    setTimeout(() => {
+                        document.getElementById('ios-prompt').style.display = 'block';
+                    }, 2000);
+                }
+            }
         });
+
+        function hideIosPrompt() {
+            document.getElementById('ios-prompt').style.display = 'none';
+            localStorage.setItem('ios_prompt_shown', 'true');
+        }
     </script>
     {% block scripts %}{% endblock %}
 </body>

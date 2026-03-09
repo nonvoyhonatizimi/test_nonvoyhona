@@ -141,6 +141,14 @@ app.register_blueprint(customer_portal_bp)
 app.register_blueprint(ai_assistant_bp)
 app.register_blueprint(comments_bp)
 
+@app.route('/sw.js')
+def serve_sw():
+    return app.send_static_file('sw.js')
+
+@app.route('/manifest.json')
+def serve_manifest():
+    return app.send_static_file('manifest.json')
+
 # Create database tables on startup
 def init_db():
     with app.app_context():
