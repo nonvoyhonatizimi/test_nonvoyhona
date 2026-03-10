@@ -622,3 +622,32 @@ def delete_oven_transfer(id):
     db.session.commit()
     flash('O\'tkazish o\'chirildi!', 'success')
     return redirect(url_for('production.list_oven'))
+
+@production_bp.route('/oven/archive/delete/<date>')
+@login_required
+def delete_oven_archive(date):
+    """Tanlangan kundagi barcha tandirchi arxivini o'chirish (faqat admin)"""
+    if current_user.rol != 'admin':
+        flash('Arxivni faqat admin o\'chira oladi!', 'error')
+        return redirect(url_for('production.list_oven'))
+        
+    try:
+        from datetime import datetime
+        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+        
+        # O'sha kundagi barcha tandirchi o'tkazishlarini o'chirish
+        deleted = BreadTransfer.query.filter_by(
+            from_turi='tandirchi',
+            sana=date_obj
+        ).delete()
+        
+        db.session.commit()
+        flash(f"{date} sanasidagi barcha ({deleted} ta) arxivlangan tandirchi o'tkazmalari muvaffaqiyatli o'chirildi!", 'success')
+        
+    except ValueError:
+        flash('Noto\'g\'ri sana formati!', 'error')
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Xatolik yuz berdi: {str(e)}", 'error')
+        
+    return redirect(url_for('production.list_oven'))

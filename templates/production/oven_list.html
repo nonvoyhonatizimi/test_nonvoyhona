@@ -175,14 +175,26 @@
     {% for h in history_dates %}
     {% if h.sana.strftime('%Y-%m-%d') != filter_date %}
     <div class="col">
-        <a href="{{ url_for('production.list_oven', date=h.sana.strftime('%Y-%m-%d')) }}" class="text-decoration-none">
-            <div class="card h-100 border-0 shadow-sm hover-elevate bg-white">
-                <div class="card-body p-3 text-center">
-                    <h6 class="text-primary mb-2 fw-bold">{{ h.sana.strftime('%d.%m.%Y') }}</h6>
-                    <span class="badge bg-light text-dark font-monospace">{{ h.soni }} ta o'tkazish</span>
-                </div>
+        <div class="card h-100 border-0 shadow-sm bg-white position-relative hover-elevate">
+            {% if current_user.rol == 'admin' %}
+            <div class="dropdown position-absolute top-0 end-0 p-1 z-3" style="z-index: 10;">
+                 <button class="btn btn-sm btn-link text-muted py-0 px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Amallar">
+                     <i class="fas fa-ellipsis-v"></i>
+                 </button>
+                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                      <li>
+                          <a class="dropdown-item text-danger" href="{{ url_for('production.delete_oven_archive', date=h.sana.strftime('%Y-%m-%d')) }}" onclick="return confirm('Rostdan ham ushbu kundagi arxivlangan barcha non o\'tkazmalarni o\'chirib tashlamoqchimisiz? Buni ortga qaytarib bo\'lmaydi!')">
+                              <i class="fas fa-trash-alt me-2"></i>Arxivni o'chirish
+                          </a>
+                      </li>
+                 </ul>
             </div>
-        </a>
+            {% endif %}
+            <a href="{{ url_for('production.list_oven', date=h.sana.strftime('%Y-%m-%d')) }}" class="text-decoration-none d-block h-100 p-3 text-center">
+                <h6 class="text-primary mb-2 fw-bold mt-1">{{ h.sana.strftime('%d.%m.%Y') }}</h6>
+                <span class="badge bg-light text-dark font-monospace">{{ h.soni }} ta o'tkazish</span>
+            </a>
+        </div>
     </div>
     {% endif %}
     {% endfor %}
