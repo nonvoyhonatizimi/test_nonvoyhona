@@ -182,12 +182,38 @@
 
             // 2. Try to find customer
             let bestMijoz = null;
-            mijozOptions.forEach(opt => {
-                const name = opt.getAttribute('data-name').toLowerCase();
-                if (text.includes(name)) {
-                    bestMijoz = opt.value;
+            // Mijoz ismini topish
+            const words = text.split(' ');
+            
+            for (let opt of mijozOptions) {
+                const customerName = opt.getAttribute('data-name').toLowerCase().trim();
+                const nameParts = customerName.split(' ');
+                
+                // Agar mijoz nomidagi barcha so'zlar gapda qatnashgan bo'lsa
+                let allPartsMatch = true;
+                for (let part of nameParts) {
+                    if (part.length > 2 && !text.includes(part)) {
+                        allPartsMatch = false;
+                        break;
+                    }
                 }
-            });
+                
+                // Aniq bitta so'zlik nomlar uchun (masalan "Turonboy")
+                // Yoki oxirgi harflar o'zgarganda (masalan "turonboyga")
+                if (!allPartsMatch && nameParts.length === 1 && customerName.length > 3) {
+                     for (let word of words) {
+                         if (word.startsWith(customerName) || customerName.startsWith(word.slice(0, -2))) {
+                             allPartsMatch = true;
+                             break;
+                         }
+                     }
+                }
+
+                if (allPartsMatch) {
+                    bestMijoz = opt.value;
+                    break; // Birinchi to'liq mos kelganini olamiz
+                }
+            }
 
             if (bestMijoz) {
                 document.getElementById('mijoz_id').value = bestMijoz;
@@ -198,12 +224,19 @@
 
             // 3. Try to find bread type
             let bestNon = null;
-            nonOptions.forEach(opt => {
-                const name = opt.value.toLowerCase();
-                if (text.includes(name)) {
+            for (let opt of nonOptions) {
+                const name = opt.value.toLowerCase().trim();
+                // "domboq", "dumboq", "dombog", "dumboqi"
+                if (
+                    (name.includes('domboq') && (text.includes('domboq') || text.includes('dumboq') || text.includes('dombog'))) ||
+                    (name.includes('oddiy') && text.includes('oddiy')) ||
+                    (name.includes('shirin') && text.includes('shirin')) ||
+                    (text.includes(name))
+                ) {
                     bestNon = opt.value;
+                    break;
                 }
-            });
+            }
 
             if (bestNon) {
                 document.getElementById('non_turi').value = bestNon;
