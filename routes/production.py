@@ -322,9 +322,18 @@ def add_oven_transfer():
                 flash('Kamida bitta non turi va miqdor kiriting!', 'error')
                 return redirect(url_for('production.add_oven_transfer'))
             
+            # Oxirgi ochiq smenani topish
+            open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
+            if open_smena:
+                current_smena = open_smena.smena
+            else:
+                # Ochiq smena yo'q - yangi smena yaratish kerak
+                current_smena = 1
+                
             # Yangi o'tkazish yaratish
             new_transfer = BreadTransfer(
                 sana=datetime.now().date(),
+                smena=current_smena,
                 from_xodim_id=from_xodim_id,
                 to_xodim_id=to_xodim_id,
                 from_turi='tandirchi'

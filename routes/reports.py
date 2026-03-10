@@ -482,11 +482,13 @@ def daily_sales():
     
     # O'tkazishlarni olish (sana filtrisiz)
     tandirchi_transfers = BreadTransfer.query.filter(
-        BreadTransfer.from_turi == 'tandirchi'
+        BreadTransfer.from_turi == 'tandirchi',
+        BreadTransfer.smena == current_smena
     ).all()
     
     haydovchi_transfers = BreadTransfer.query.filter(
-        BreadTransfer.from_turi == 'haydovchi'
+        BreadTransfer.from_turi == 'haydovchi',
+        BreadTransfer.smena == current_smena
     ).all()
     
     # Jami hisobot
