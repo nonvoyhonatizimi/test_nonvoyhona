@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Dough, BreadMaking, Oven, OvenDetail, Employee, UnQoldiq, UnTuri, BreadType, BreadTransfer, DriverInventory, uz_datetime
+from models import db, Dough, BreadMaking, Oven, OvenDetail, Employee, UnQoldiq, UnTuri, BreadType, BreadTransfer, DriverInventory, DayStatus, uz_datetime
 from datetime import datetime, timedelta
 
 production_bp = Blueprint('production', __name__, url_prefix='/production')
@@ -8,8 +8,36 @@ production_bp = Blueprint('production', __name__, url_prefix='/production')
 @production_bp.route('/dough')
 @login_required
 def list_dough():
-    doughs = Dough.query.order_by(Dough.sana.desc()).all()
-    return render_template('production/dough_list.html', doughs=doughs, timedelta=timedelta)
+    date_str = request.args.get('date')
+    today = datetime.now().date()
+    
+    if date_str:
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            filter_date = date_str
+        except ValueError:
+            date_obj = today
+            filter_date = today.strftime('%Y-%m-%d')
+    else:
+        date_obj = today
+        filter_date = today.strftime('%Y-%m-%d')
+        
+    doughs = Dough.query.filter(Dough.sana == date_obj).order_by(Dough.created_at.desc()).all()
+    
+    # Tarix uchun sanalarni guruhlab olish
+    from sqlalchemy import func
+    history_query = db.session.query(
+        Dough.sana, 
+        func.count(Dough.id).label('soni')
+    ).group_by(Dough.sana).order_by(Dough.sana.desc()).limit(15)
+    
+    history_dates = history_query.all()
+    
+    return render_template('production/dough_list.html', 
+                         doughs=doughs, 
+                         timedelta=timedelta,
+                         filter_date=filter_date,
+                         history_dates=history_dates)
 
 @production_bp.route('/dough/add', methods=['GET', 'POST'])
 @login_required
