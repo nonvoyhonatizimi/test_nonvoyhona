@@ -182,7 +182,8 @@ def detail(employee_id):
                          jami_ish_haqqi=jami_ish_haqqi,
                          jami_tolangan=jami_tolangan,
                          yil=yil,
-                         oy=oy)
+                         oy=oy,
+                         notes=notes)
 
 @payroll_bp.route('/pay/<int:employee_id>', methods=['POST'])
 @login_required
