@@ -240,15 +240,18 @@ def add_note(employee_id):
     sana_str = request.form.get('sana')
     izoh = request.form.get('izoh', '').strip()
     
-    if not sana_str or not izoh:
-        flash("Sana va izoh kiritilishi shart!", "error")
+    if not izoh:
+        flash("Izoh kiritilishi shart!", "error")
         return redirect(url_for('payroll.detail', employee_id=employee_id))
         
-    try:
-        sana = datetime.strptime(sana_str, '%Y-%m-%d').date()
-    except ValueError:
-        flash("Noto'g'ri sana formati!", "error")
-        return redirect(url_for('payroll.detail', employee_id=employee_id))
+    if sana_str:
+        try:
+            sana = datetime.strptime(sana_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash("Noto'g'ri sana formati!", "error")
+            return redirect(url_for('payroll.detail', employee_id=employee_id))
+    else:
+        sana = uz_datetime().date()
         
     new_note = EmployeeNote(
         xodim_id=employee_id,

@@ -44,10 +44,9 @@
                 <div class="card-body">
                     <label class="form-label fw-bold"><i class="fas fa-comment-dots text-primary"></i> Izoh qoldirish</label>
                     <form action="{{ url_for('payroll.add_note', employee_id=employee.id, yil=yil, oy=oy) }}" method="POST">
-                        <div class="d-flex align-items-start mb-2">
-                            <input type="date" name="sana" class="form-control me-2" required style="width: 140px;">
-                            <textarea class="form-control me-2" name="izoh" rows="1" placeholder="Izoh yozing..." required></textarea>
-                            <button type="submit" class="btn btn-primary d-flex align-items-center">
+                        <div class="mb-2">
+                            <textarea class="form-control mb-2" name="izoh" rows="3" placeholder="Izoh yozing..." required></textarea>
+                            <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center">
                                 <i class="fas fa-save me-1"></i> Saqlash
                             </button>
                         </div>
