@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from models import db, Sale, Customer, Cash, BreadType, BreadTransfer, Employee, DriverPayment, DriverInventory, DayStatus, Eslatma, uz_datetime
 from datetime import datetime, date
@@ -115,6 +115,16 @@ Xodim: {sale_data['xodim']}
     except Exception as e:
         print(f"[XATO] Telegram exception: {e}")
         return False
+
+@sales_bp.route('/api/search_customers')
+@login_required
+def search_customers():
+    q = request.args.get('q', '').lower().strip()
+    if not q:
+        return jsonify([])
+    # Mijozlar ro'yxatini qidirish
+    customers = Customer.query.filter(Customer.nomi.ilike(f'%{q}%')).limit(10).all()
+    return jsonify([c.nomi for c in customers])
 
 @sales_bp.route('/')
 @login_required

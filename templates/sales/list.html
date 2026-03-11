@@ -46,11 +46,12 @@
     <div class="card-body">
         <!-- Qidiruv va Filtr -->
         <form method="GET" action="{{ url_for('sales.list_sales') }}" class="row g-3 mb-4">
-            <div class="col-md-5">
+            <div class="col-md-5 position-relative">
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" name="customer_name" class="form-control" placeholder="Mijoz ismi b-n qidirish..." value="{{ customer_name }}">
+                    <input type="text" id="customer_search" name="customer_name" class="form-control" placeholder="Mijoz ismi b-n qidirish..." value="{{ customer_name }}" autocomplete="off">
                 </div>
+                <div id="customer_suggestions" class="list-group position-absolute w-100 shadow-lg" style="z-index: 1050; display: none; top: 100%;"></div>
             </div>
             <div class="col-md-4">
                 <div class="input-group">
@@ -255,4 +256,50 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('customer_search').addEventListener('input', function() {
+    let q = this.value;
+    let suggestions = document.getElementById('customer_suggestions');
+    if (q.length < 1) {
+        suggestions.style.display = 'none';
+        return;
+    }
+    fetch(`/sales/api/search_customers?q=${q}`)
+        .then(response => response.json())
+        .then(data => {
+            suggestions.innerHTML = '';
+            if (data.length > 0) {
+                data.forEach(name => {
+                    let item = document.createElement('a');
+                    item.href = '#';
+                    item.className = 'list-group-item list-group-item-action py-2 border-primary-subtle';
+                    item.style.cursor = 'pointer';
+                    item.innerText = name;
+                    item.onclick = (e) => {
+                        e.preventDefault();
+                        this.value = name;
+                        suggestions.style.display = 'none';
+                        // Submit form automatically
+                        this.closest('form').submit();
+                    };
+                    suggestions.appendChild(item);
+                });
+                suggestions.style.display = 'block';
+            } else {
+                suggestions.style.display = 'none';
+            }
+        });
+});
+
+document.addEventListener('click', function(e) {
+    const searchInput = document.getElementById('customer_search');
+    const suggestions = document.getElementById('customer_suggestions');
+    if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) {
+        suggestions.style.display = 'none';
+    }
+});
+</script>
 {% endblock %}
