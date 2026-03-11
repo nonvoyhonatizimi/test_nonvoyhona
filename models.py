@@ -247,3 +247,15 @@ class CustomerComment(db.Model):
     
     customer = db.relationship('Customer', backref='comments')
     admin = db.relationship('User', backref='admin_comments')
+
+
+class Eslatma(db.Model):
+    __tablename__ = 'eslatmalar'
+    id = db.Column(db.Integer, primary_key=True)
+    matn = db.Column(db.Text, nullable=False)
+    sana = db.Column(db.DateTime, default=uz_datetime)
+    muallif_ismi = db.Column(db.String(100))
+    muallif_roli = db.Column(db.String(50))
+    user_id = db.Column(db.Integer, db.ForeignKey('foydalanuvchilar.id'), nullable=True)
+    
+    foydalanuvchi = db.relationship('User', backref=db.backref('eslatmalar', lazy=True))

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Eslatmalar - Nonvoyhona Tizimi{% endblock %}
+{% block header_title %}Eslatmalar{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4" style="position: sticky; top: 20px;">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-pen me-2"></i> Yangi eslatma yozish</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('sales.add_note') }}" method="POST">
+                    <div class="mb-3">
+                        <textarea name="matn" class="form-control" rows="5" required placeholder="Admin yoki xodimlar uchun eslatma qoldiring..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mb-2">
+                        <i class="fas fa-paper-plane me-2"></i> Yuborish
+                    </button>
+                    <a href="{{ url_for('sales.list_sales') }}" class="btn btn-light w-100">
+                        <i class="fas fa-arrow-left me-2"></i> Sotuvlarga qaytish
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="fas fa-comments me-2"></i> Barcha eslatmalar</h5>
+        </div>
+        
+        {% for note in notes %}
+        <div class="card mb-3 border-0 shadow-sm border-start border-4 {% if note.muallif_roli == 'Admin' %}border-primary{% else %}border-success{% endif %}">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center border-0 pt-3 pb-0">
+                <div>
+                    <strong class="{% if note.muallif_roli == 'Admin' %}text-primary{% else %}text-success{% endif %}">
+                        <i class="fas fa-user-circle me-1"></i> {{ note.muallif_ismi }}
+                    </strong> 
+                    <span class="badge bg-light text-dark ms-2">{{ note.muallif_roli }}</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="text-muted small me-3"><i class="fas fa-clock me-1"></i> {{ note.sana.strftime('%d.%m.%Y %H:%M') }}</span>
+                    {% if current_user.rol == 'admin' or note.user_id == current_user.id %}
+                    <a href="{{ url_for('sales.delete_note', id=note.id) }}" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('O\'chirishni tasdiqlaysizmi?')">
+                        <i class="fas fa-trash-alt"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body pt-2 pb-3">
+                <p class="card-text text-dark" style="white-space: pre-wrap;">{{ note.matn }}</p>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-light text-center border-0 shadow-sm py-5">
+            <i class="fas fa-comment-slash fa-3x text-muted mb-3 d-block"></i>
+            <h5 class="text-muted">Hozircha eslatmalar yo'q</h5>
+            <p class="text-muted small mb-0">Chap tomondagi forma orqali birinchi eslatmani yuborishingiz mumkin.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

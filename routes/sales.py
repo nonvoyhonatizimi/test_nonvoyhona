@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Sale, Customer, Cash, BreadType, BreadTransfer, Employee, DriverPayment, DriverInventory, DayStatus, uz_datetime
+from models import db, Sale, Customer, Cash, BreadType, BreadTransfer, Employee, DriverPayment, DriverInventory, DayStatus, Eslatma, uz_datetime
 from datetime import datetime, date
 import requests
 import json
@@ -801,3 +801,51 @@ def collect_payment(id):
     
     flash(f'To\'lov to\'landi: {payment.summa:,.0f} so\'m', 'success')
     return redirect(url_for('sales.driver_payments'))
+
+# ========== ESLATMALAR ==========
+@sales_bp.route('/notes')
+@login_required
+def list_notes():
+    """Eslatmalar ro'yxati (Barcha xodimlar va admin uchun)"""
+    notes = Eslatma.query.order_by(Eslatma.sana.desc()).all()
+    return render_template('sales/notes.html', notes=notes)
+
+@sales_bp.route('/notes/add', methods=['POST'])
+@login_required
+def add_note():
+    """Yangi eslatma qo'shish"""
+    matn = request.form.get('matn')
+    if not matn or not matn.strip():
+        flash('Eslatma matnini kiriting!', 'error')
+        return redirect(url_for('sales.list_notes'))
+    
+    isim = current_user.ism if current_user.ism else "Noma'lum"
+    rol = 'Admin' if current_user.rol == 'admin' else current_user.employee.lavozim if current_user.employee else 'Xodim'
+    
+    new_note = Eslatma(
+        matn=matn.strip(),
+        sana=uz_datetime(),
+        muallif_ismi=isim,
+        muallif_roli=rol,
+        user_id=current_user.id
+    )
+    db.session.add(new_note)
+    db.session.commit()
+    
+    flash('Eslatma muvaffaqiyatli qo\'shildi!', 'success')
+    return redirect(url_for('sales.list_notes'))
+
+@sales_bp.route('/notes/delete/<int:id>')
+@login_required
+def delete_note(id):
+    """Eslatmani o'chirish"""
+    note = Eslatma.query.get_or_404(id)
+    
+    if current_user.rol == 'admin' or note.user_id == current_user.id:
+        db.session.delete(note)
+        db.session.commit()
+        flash('Eslatma o\'chirildi!', 'success')
+    else:
+        flash('Sizda bu eslatmani o\'chirish huquqi yo\'q!', 'error')
+        
+    return redirect(url_for('sales.list_notes'))
