@@ -438,8 +438,12 @@ def edit_sale(id):
         # Calculate difference in debt
         old_qarz = sale.qoldiq_qarz
         old_tolandi = sale.tolandi
+        old_mijoz_id = sale.mijoz_id
         
-        sale.mijoz_id = request.form.get('mijoz_id')
+        new_mijoz_id_str = request.form.get('mijoz_id')
+        new_mijoz_id = int(new_mijoz_id_str) if new_mijoz_id_str and new_mijoz_id_str.isdigit() else None
+        
+        sale.mijoz_id = new_mijoz_id
         sale.non_turi = request.form.get('non_turi')
         sale.miqdor = int(request.form.get('miqdor', 0))
         narx = Decimal(str(request.form.get('narx', 0)))
@@ -465,10 +469,24 @@ def edit_sale(id):
                 except Exception as e:
                     print(f"[DEBUG] Soat yangilashda xato: {e}")
         
-        # Update customer debt
-        customer = Customer.query.get(sale.mijoz_id)
-        if customer:
-            customer.jami_qarz = customer.jami_qarz - old_qarz + sale.qoldiq_qarz
+        # Update customer debt correctly
+        if old_mijoz_id == new_mijoz_id and new_mijoz_id is not None:
+            customer = Customer.query.get(new_mijoz_id)
+            if customer:
+                customer.jami_qarz = customer.jami_qarz - old_qarz + sale.qoldiq_qarz
+                db.session.add(customer)
+        else:
+            if old_mijoz_id is not None:
+                old_customer = Customer.query.get(old_mijoz_id)
+                if old_customer:
+                    old_customer.jami_qarz -= old_qarz
+                    db.session.add(old_customer)
+                    
+            if new_mijoz_id is not None:
+                new_customer = Customer.query.get(new_mijoz_id)
+                if new_customer:
+                    new_customer.jami_qarz += sale.qoldiq_qarz
+                    db.session.add(new_customer)
         
         # Agar to'lov qilingan bo'lsa (tolandi o'zgargan), haydovchi to'lovini ham yangilash
         new_tolandi = Decimal(str(request.form.get('tolandi', 0)))
@@ -497,24 +515,27 @@ def delete_sale(id):
     from models import DriverPayment
     sale = Sale.query.get_or_404(id)
     
-    # Haydovchi to'lovini (qarzini) o'chirish (Agar mavjud bo'lsa)
-    # Bu not-null constraint xatoligini oldini oladi
-    DriverPayment.query.filter_by(sale_id=sale.id).delete()
+    # Haydovchi to'lovini o'chirish
+    driver_payments = DriverPayment.query.filter_by(sale_id=sale.id).all()
+    for dp in driver_payments:
+        db.session.delete(dp)
     
-    # Update customer debt
-    customer = Customer.query.get(sale.mijoz_id)
-    if customer:
-        customer.jami_qarz -= sale.qoldiq_qarz
+    # Update customer debt safely
+    if sale.mijoz_id:
+        customer = Customer.query.get(sale.mijoz_id)
+        if customer:
+            customer.jami_qarz -= sale.qoldiq_qarz
+            db.session.add(customer)
     
-    # Delete related cash entry if exists (for the payment part)
-    if sale.tolandi > 0:
+    # Delete related cash entry if exists
+    if sale.tolandi > 0 and sale.mijoz_id and customer:
         cash_entry = Cash.query.filter(
-            Cash.izoh.like(f'%Sotuv: {customer.nomi if customer else ""}%'),
+            Cash.izoh.like(f'%Sotuv: {customer.nomi}%'),
             Cash.kirim == sale.tolandi
         ).order_by(Cash.id.desc()).first()
         if cash_entry:
             db.session.delete(cash_entry)
-    
+            
     # Nonni haydovchi inventorysiga qaytarish
     if sale.xodim_id:
         inventory = DriverInventory.query.filter_by(
@@ -527,7 +548,6 @@ def delete_sale(id):
             inventory.miqdor += sale.miqdor
             inventory.updated_at = uz_datetime()
         else:
-            # Agar shu sana uchun record bo'lmasa, yangi yaratish
             new_inv = DriverInventory(
                 driver_id=sale.xodim_id,
                 non_turi=sale.non_turi,
@@ -536,11 +556,9 @@ def delete_sale(id):
             )
             db.session.add(new_inv)
 
-    # Endi sotuvni o'chirish
-    sale = Sale.query.get_or_404(id)  # Yangidan olish (session yangilandi)
     db.session.delete(sale)
     db.session.commit()
-    flash('Sotuv ma\'lumoti o\'chirildi va non inventoryga qaytarildi', 'success')
+    flash('Sotuv ma\'lumoti o\'chirildi va mijoz qarzi yangilandi', 'success')
     return redirect(url_for('sales.list_sales'))
 
 # ========== HAYDOVCHI → HAYDOVCHI NON O'TKAZISH ==========
