@@ -178,7 +178,9 @@ def add_bread():
         
         return redirect(url_for('production.list_bread'))
     
-    doughs = Dough.query.order_by(Dough.sana.desc()).all()
+    # Faqat bugungi xamirlarni ko'rsatish (kechasi 12 da bo'shab qolishi uchun)
+    bugun = uz_datetime().date()
+    doughs = Dough.query.filter_by(sana=bugun).order_by(Dough.created_at.desc()).all()
     employees = Employee.query.filter_by(lavozim='Yasovchi').all()
     non_turlari = BreadType.query.order_by(BreadType.nomi).all()
     return render_template('production/bread_add.html', doughs=doughs, employees=employees, non_turlari=non_turlari, timedelta=timedelta)

@@ -25,7 +25,7 @@
                                 <label for="xamir_id" class="form-label">Xamir (Sana - Soat)</label>
                                 <select class="form-select" id="xamir_id" name="xamir_id" required>
                                     {% for d in doughs %}
-                                    <option value="{{ d.id }}">{{ (d.created_at + timedelta(hours=5)).strftime('%d.%m.%Y %H:%M') if d.created_at else d.sana.strftime('%d.%m.%Y') }} - {{ d.un_kg }} kg</option>
+                                    <option value="{{ d.id }}">{{ (d.created_at + timedelta(hours=5)).strftime('%d.%m %H:%M') if d.created_at else d.sana.strftime('%d.%m') }} - {{ d.un_turi }} - {{ d.un_kg }} kg</option>
                                     {% endfor %}
                                 </select>
                             </div>
