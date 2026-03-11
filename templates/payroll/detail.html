@@ -59,6 +59,7 @@
                     <th>Ish Soni</th>
                     <th>Ish Haqqi</th>
                     <th>Holat</th>
+                    <th>Izohlar</th>
                     {% if current_user.rol == 'admin' %}
                     <th>Amal</th>
                     {% endif %}
@@ -75,17 +76,44 @@
                         {% else %}
                             <span class="text-danger fw-bold">{{ "{:,.0f}".format(kun.ish_haqqi) }} so'm</span>
                         {% endif %}
+                        {% if kun.payment_izoh %}
+                        <div class="text-muted small mt-1"><i class="fas fa-info-circle"></i> {{ kun.payment_izoh }}</div>
+                        {% endif %}
                     </td>
                     <td>
                         {% if kun.is_paid %}
                             <span class="badge bg-success"><i class="fas fa-check-circle"></i> To'langan</span>
                         {% else %}
+                            {% if kun.ish_soni > 0 %}
                             <span class="badge bg-danger"><i class="fas fa-exclamation-circle"></i> To'lanmagan</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <!-- Mavjud izohlar -->
+                        {% for note in kun.notes %}
+                        <div class="mb-1 p-1 bg-light rounded d-flex justify-content-between align-items-center">
+                            <span class="small">{{ note.izoh }}</span>
+                            {% if current_user.rol == 'admin' %}
+                            <a href="{{ url_for('payroll.delete_note', note_id=note.id, yil=yil, oy=oy) }}" class="text-danger ms-2" onclick="return confirm('Izohni o\'chirasizmi?')" title="O'chirish"><i class="fas fa-times"></i></a>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Yangi izoh qo'shish -->
+                        {% if current_user.rol == 'admin' %}
+                        <form action="{{ url_for('payroll.add_note', employee_id=employee.id, yil=yil, oy=oy) }}" method="POST" class="mt-1 d-flex">
+                            <input type="hidden" name="sana" value="{{ kun.sana_obj.strftime('%Y-%m-%d') }}">
+                            <input type="text" name="izoh" class="form-control form-control-sm" placeholder="Yangi izoh yozish..." required>
+                            <button type="submit" class="btn btn-sm btn-outline-primary ms-1" title="Saqlash"><i class="fas fa-save"></i></button>
+                        </form>
                         {% endif %}
                     </td>
                     {% if current_user.rol == 'admin' %}
                     <td>
-                        {% if not kun.is_paid %}
+                        {% if not kun.is_paid and kun.ish_soni > 0 %}
                         <form action="{{ url_for('payroll.pay_salary', employee_id=employee.id, yil=yil, oy=oy) }}" method="POST" class="d-inline" onsubmit="return attachIzoh(this)">
                             <input type="hidden" name="sana" value="{{ kun.sana_obj.strftime('%Y-%m-%d') }}">
                             <input type="hidden" name="summa" value="{{ kun.ish_haqqi }}">
@@ -94,10 +122,12 @@
                                 <i class="fas fa-money-bill-wave"></i> To'lash
                             </button>
                         </form>
-                        {% else %}
+                        {% elif kun.is_paid %}
                         <button class="btn btn-sm btn-outline-secondary" disabled>
                             To'langan
                         </button>
+                        {% else %}
+                        <span class="text-muted">-</span>
                         {% endif %}
                     </td>
                     {% endif %}

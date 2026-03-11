@@ -270,3 +270,13 @@ class SalaryPayment(db.Model):
     created_at = db.Column(db.DateTime, default=uz_datetime)
     
     employee = db.relationship('Employee', backref='salary_payments')
+
+class EmployeeNote(db.Model):
+    __tablename__ = 'xodim_izohlari'
+    id = db.Column(db.Integer, primary_key=True)
+    xodim_id = db.Column(db.Integer, db.ForeignKey('xodimlar.id', ondelete='CASCADE'), nullable=False)
+    sana = db.Column(db.Date, nullable=False)  # Qaysi kun uchun izoh
+    izoh = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=uz_datetime)
+    
+    employee = db.relationship('Employee', backref='notes')

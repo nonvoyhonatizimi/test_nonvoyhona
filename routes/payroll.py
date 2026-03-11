@@ -79,7 +79,7 @@ def index():
 @payroll_bp.route('/detail/<int:employee_id>')
 @login_required
 def detail(employee_id):
-    from models import SalaryPayment
+    from models import SalaryPayment, EmployeeNote
     emp = Employee.query.get_or_404(employee_id)
     
     # Oy va yil
@@ -96,14 +96,27 @@ def detail(employee_id):
     jami_ish_haqqi = 0
     jami_tolangan = 0
     
-    # Get all payments for this month
+    # Get all payments and notes for this month
     payments = SalaryPayment.query.filter(
         SalaryPayment.xodim_id == emp.id,
         SalaryPayment.sana >= boshlanish,
         SalaryPayment.sana <= tugash
     ).all()
     
+    notes = EmployeeNote.query.filter(
+        EmployeeNote.xodim_id == emp.id,
+        EmployeeNote.sana >= boshlanish,
+        EmployeeNote.sana <= tugash
+    ).all()
+    
     payment_map = {p.sana: p for p in payments}
+    
+    # Create notes map where one date can have multiple notes
+    note_map = {}
+    for note in notes:
+        if note.sana not in note_map:
+            note_map[note.sana] = []
+        note_map[note.sana].append(note)
     
     for kun in range(1, oxirgi_kun + 1):
         ish_kuni = date(yil, oy, kun)
@@ -132,18 +145,23 @@ def detail(employee_id):
         else:
             stavka = emp.ish_haqqi_stavka or 0
         
-        if ish_soni > 0:
+        # We always want to show the day if there is a note, even if ish_soni is 0
+        day_notes = note_map.get(ish_kuni, [])
+        payment = payment_map.get(ish_kuni)
+        
+        if ish_soni > 0 or day_notes or payment:
             from decimal import Decimal
             ish_haqqi = Decimal(str(ish_soni)) * Decimal(str(stavka))
             jami_ish_haqqi += ish_haqqi
             
-            payment = payment_map.get(ish_kuni)
             is_paid = bool(payment)
             if is_paid:
                 jami_tolangan += ish_haqqi
                 payment_id = payment.id
+                payment_izoh = payment.izoh
             else:
                 payment_id = None
+                payment_izoh = None
                 
             kunlik_ish.append({
                 'sana_obj': ish_kuni,
@@ -151,8 +169,13 @@ def detail(employee_id):
                 'ish_soni': ish_soni,
                 'ish_haqqi': ish_haqqi,
                 'is_paid': is_paid,
-                'payment_id': payment_id
+                'payment_id': payment_id,
+                'payment_izoh': payment_izoh,
+                'notes': day_notes
             })
+            
+    # Kunlarni teskari tartibda, tepadagilar birinchi ko'rinishi uchun
+    kunlik_ish.reverse()
     
     return render_template('payroll/detail.html',
                          employee=emp,
@@ -199,17 +222,6 @@ def pay_salary(employee_id):
         )
         db.session.add(new_payment)
         
-        # Optionally, xarajatlar ro'yxatiga (Expense) ham qo'shib qo'yish mumkin
-        # from models import Expense
-        # new_expense = Expense(
-        #     sana=uz_datetime().date(),
-        #     turi="Ish haqqi",
-        #     summa=summa,
-        #     izoh=f"{Employee.query.get(employee_id).ism} - {sana.strftime('%d.%m.%Y')} ish haqqi: {izoh}",
-        #     xodim_id=employee_id
-        # )
-        # db.session.add(new_expense)
-        
         db.session.commit()
         flash(f"{sana.strftime('%d.%m.%Y')} sanasi uchun {summa:,.0f} so'm to'landi!", "success")
         
@@ -217,3 +229,60 @@ def pay_salary(employee_id):
     yil = request.args.get('yil', date.today().year)
     oy = request.args.get('oy', date.today().month)
     return redirect(url_for('payroll.detail', employee_id=employee_id, yil=yil, oy=oy))
+
+@payroll_bp.route('/add_note/<int:employee_id>', methods=['POST'])
+@login_required
+def add_note(employee_id):
+    if current_user.rol != 'admin':
+        flash("Izoh qoldirish faqat adminlar uchun!", "error")
+        return redirect(url_for('payroll.detail', employee_id=employee_id))
+        
+    from models import EmployeeNote, uz_datetime
+    
+    sana_str = request.form.get('sana')
+    izoh = request.form.get('izoh', '').strip()
+    
+    if not sana_str or not izoh:
+        flash("Sana va izoh kiritilishi shart!", "error")
+        return redirect(url_for('payroll.detail', employee_id=employee_id))
+        
+    try:
+        sana = datetime.strptime(sana_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash("Noto'g'ri sana formati!", "error")
+        return redirect(url_for('payroll.detail', employee_id=employee_id))
+        
+    new_note = EmployeeNote(
+        xodim_id=employee_id,
+        sana=sana,
+        izoh=izoh,
+        created_at=uz_datetime()
+    )
+    db.session.add(new_note)
+    db.session.commit()
+    
+    flash("Izoh muvaffaqiyatli saqlandi!", "success")
+    
+    yil = request.args.get('yil', date.today().year)
+    oy = request.args.get('oy', date.today().month)
+    return redirect(url_for('payroll.detail', employee_id=employee_id, yil=yil, oy=oy))
+
+@payroll_bp.route('/delete_note/<int:note_id>')
+@login_required
+def delete_note(note_id):
+    if current_user.rol != 'admin':
+        flash("Izohni o'chirish faqat adminlar uchun!", "error")
+        return redirect(url_for('payroll.index'))
+        
+    from models import EmployeeNote
+    note = EmployeeNote.query.get_or_404(note_id)
+    emp_id = note.xodim_id
+    
+    db.session.delete(note)
+    db.session.commit()
+    
+    flash("Izoh o'chirildi!", "success")
+    
+    yil = request.args.get('yil', date.today().year)
+    oy = request.args.get('oy', date.today().month)
+    return redirect(url_for('payroll.detail', employee_id=emp_id, yil=yil, oy=oy))
