@@ -29,7 +29,7 @@
                     To'langan summa jami summadan oshib ketishi mumkin emas!
                 </div>
                 <form id="sale-form" method="POST" onsubmit="return validateSale()">
-                    <div class="mb-3">
+                    <div id="mijoz_div" class="mb-3">
                         <label for="mijoz_search" class="form-label">Mijoz qidirish</label>
                         <input type="text" class="form-control mb-2" id="mijoz_search" placeholder="Mijoz nomini yozing..." onkeyup="filterCustomers()">
                         <label for="mijoz_id" class="form-label">Mijoz</label>
@@ -72,6 +72,43 @@
                             return true;
                         }
                     </script>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="adashilgan" name="adashilgan" value="yes" onchange="toggleAdashilgan()">
+                        <label class="form-check-label text-danger fw-bold" for="adashilgan">
+                            Adashilgan (Brak qilingan, faqat non qoldig'idan ayirish uchun)
+                        </label>
+                    </div>
+                    
+                    <script>
+                        function toggleAdashilgan() {
+                            var isChecked = document.getElementById('adashilgan').checked;
+                            var mijozDiv = document.getElementById('mijoz_div');
+                            var narxDiv = document.getElementById('narx_div');
+                            var tolandiDiv = document.getElementById('tolandi_div');
+                            var mijozSelect = document.getElementById('mijoz_id');
+                            var narxInput = document.getElementById('narx');
+                            var tolandiInput = document.getElementById('tolandi');
+                            
+                            if (isChecked) {
+                                mijozDiv.style.display = 'none';
+                                narxDiv.style.display = 'none';
+                                tolandiDiv.style.display = 'none';
+                                
+                                mijozSelect.removeAttribute('required');
+                                narxInput.removeAttribute('required');
+                                narxInput.value = '0';
+                                tolandiInput.value = '0';
+                            } else {
+                                mijozDiv.style.display = 'block';
+                                narxDiv.style.display = 'block';
+                                tolandiDiv.style.display = 'block';
+                                
+                                mijozSelect.setAttribute('required', 'required');
+                                narxInput.setAttribute('required', 'required');
+                                updatePrice(); // Narxni yana oldingidek qo'yish
+                            }
+                        }
+                    </script>
                     <div class="mb-3">
                         <label for="non_turi" class="form-label">Non turi</label>
                         <select class="form-select" id="non_turi" name="non_turi" required onchange="updatePrice()">
@@ -82,6 +119,10 @@
                     </div>
                     <script>
                         function updatePrice() {
+                            if(document.getElementById('adashilgan').checked) {
+                                document.getElementById('narx').value = '0';
+                                return;
+                            }
                             var select = document.getElementById('non_turi');
                             var option = select.options[select.selectedIndex];
                             var narx = option.getAttribute('data-narx');
@@ -95,12 +136,12 @@
                             <label for="miqdor" class="form-label">Miqdor (dona)</label>
                             <input type="number" class="form-control" id="miqdor" name="miqdor" required>
                         </div>
-                        <div class="col">
+                        <div class="col" id="narx_div">
                             <label for="narx" class="form-label">Narx (so'm)</label>
                             <input type="number" class="form-control" id="narx" name="narx" required>
                         </div>
                     </div>
-                    <div class="mb-4">
+                    <div class="mb-4" id="tolandi_div">
                         <label for="tolandi" class="form-label">To'landi (so'm)</label>
                         <input type="number" class="form-control" id="tolandi" name="tolandi" value="0" min="0">
                         <small class="text-muted">0 bo'lsa to'liq qarz hisoblanadi</small>

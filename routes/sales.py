@@ -276,17 +276,27 @@ def add_sale():
     if request.method == 'POST':
         from decimal import Decimal
         
-        mijoz_id = request.form.get('mijoz_id')
+        adashilgan = request.form.get('adashilgan')
         non_turi = request.form.get('non_turi')
         miqdor = int(request.form.get('miqdor', 0))
-        narx = Decimal(str(request.form.get('narx', 0)))
-        tolandi_str = request.form.get('tolandi', '0')
-        tolandi = Decimal(tolandi_str) if tolandi_str and tolandi_str.strip() else Decimal('0')
         
-        jami = miqdor * narx
-        qarz = jami - tolandi
+        if adashilgan == 'yes':
+            mijoz_id = None
+            narx = Decimal('0')
+            jami = Decimal('0')
+            tolandi = Decimal('0')
+            qarz = Decimal('0')
+            non_turi_saqlash = f"{non_turi} (Adashilgan)"
+        else:
+            mijoz_id = request.form.get('mijoz_id')
+            narx = Decimal(str(request.form.get('narx', 0)))
+            tolandi_str = request.form.get('tolandi', '0')
+            tolandi = Decimal(tolandi_str) if tolandi_str and tolandi_str.strip() else Decimal('0')
+            jami = miqdor * narx
+            qarz = jami - tolandi
+            non_turi_saqlash = non_turi
         
-        # Inventory tekshirish - haydovchida yetarli non bormi? (barcha sanalar bo'yicha)
+        # Inventory tekshirish - haydovchida yetarli non bormi? (original non turi bilan tekshiriladi)
         if current_user.employee_id:
             from sqlalchemy import func
             total_miqdor = db.session.query(
@@ -300,19 +310,18 @@ def add_sale():
                 flash(f'Sizda yetarli {non_turi} yo\'q! (Mavjud: {total_miqdor} dona, Kerak: {miqdor} dona)', 'error')
                 return redirect(url_for('sales.add_sale'))
         
-        # Oxirgi ochiq smenani topish (sana nazariga qaramay)
+        # Oxirgi ochiq smenani topish
         open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
         if open_smena:
             current_smena = open_smena.smena
         else:
-            # Ochiq smena yo'q - yangi smena yaratish kerak
             current_smena = 1
         
         new_sale = Sale(
             sana=datetime.now().date(),
             smena=current_smena,
             mijoz_id=mijoz_id,
-            non_turi=non_turi,
+            non_turi=non_turi_saqlash,
             miqdor=miqdor,
             narx_dona=narx,
             jami_summa=jami,
@@ -322,32 +331,33 @@ def add_sale():
             xodim_id=current_user.employee_id
         )
         
-        # Update customer debt
-        customer = Customer.query.get(mijoz_id)
-        if customer:
-            customer.jami_qarz += qarz
-            customer.oxirgi_sana = datetime.now().date()
+        # Update customer debt and cash if not adashilgan
+        customer = None
+        if mijoz_id:
+            customer = Customer.query.get(mijoz_id)
+            if customer:
+                customer.jami_qarz += qarz
+                customer.oxirgi_sana = datetime.now().date()
         
-        # Add to cash
-        if tolandi > 0:
-            last_cash = Cash.query.order_by(Cash.id.desc()).first()
-            current_balance = last_cash.balans if last_cash else 0
-            new_cash = Cash(
-                sana=datetime.now().date(),
-                kirim=tolandi,
-                balans=current_balance + tolandi,
-                izoh=f"Sotuv: {customer.nomi if customer else 'Noma`lum'}",
-                turi='Sotuv'
-            )
-            db.session.add(new_cash)
+            # Add to cash
+            if tolandi > 0:
+                last_cash = Cash.query.order_by(Cash.id.desc()).first()
+                current_balance = last_cash.balans if last_cash else 0
+                new_cash = Cash(
+                    sana=datetime.now().date(),
+                    kirim=tolandi,
+                    balans=current_balance + tolandi,
+                    izoh=f"Sotuv: {customer.nomi if customer else 'Noma`lum'}",
+                    turi='Sotuv'
+                )
+                db.session.add(new_cash)
             
         db.session.add(new_sale)
         db.session.commit()
         
-        # Inventorydan non ayirish (eng yangi sanadan boshlab)
+        # Inventorydan non ayirish (original non_turi orqali)
         if current_user.employee_id:
             remaining = miqdor
-            # Eng yangi sanalardan boshlab ayirish
             inventories = DriverInventory.query.filter_by(
                 driver_id=current_user.employee_id,
                 non_turi=non_turi
@@ -366,12 +376,12 @@ def add_sale():
                     inv.updated_at = uz_datetime()
             
             if remaining > 0:
-                flash(f'Xatolik: {remaining} dona non ayrib bo\'lmadi!', 'error')
+                flash(f'Xatolik: {remaining} dona {non_turi} ayirib bo\'lmadi!', 'error')
             else:
                 db.session.commit()
         
-        # Avtomatik Haydovchi to'lovi yaratish (agar qarz bo'lsa va haydovchi bo'lsa)
-        if qarz > 0 and current_user.employee_id:
+        # Avtomatik Haydovchi to'lovi yaratish
+        if qarz > 0 and current_user.employee_id and mijoz_id:
             driver_payment = DriverPayment(
                 sale_id=new_sale.id,
                 driver_id=current_user.employee_id,
@@ -383,30 +393,34 @@ def add_sale():
             db.session.add(driver_payment)
             db.session.commit()
         
-        # Send Telegram notification
-        sale_info = {
-            "sotuv_id": new_sale.id,
-            "sana": new_sale.sana.strftime('%d.%m.%Y'),
-            "vaqt": uz_datetime().strftime('%H:%M:%S'),
-            "mijoz": customer.nomi if customer else "Noma'lum",
-            "non_turi": non_turi,
-            "miqdor": miqdor,
-            "narx_dona": Decimal(str(narx)),
-            "jami_summa": Decimal(str(jami)),
-            "tolandi": Decimal(str(tolandi)),
-            "qarz": Decimal(str(qarz)),
-            "xodim": current_user.ism
-        }
-        # Telegram xabarini alohida thread da yuborish (tezroq bo'lishi uchun)
-        import threading
-        telegram_thread = threading.Thread(
-            target=send_telegram_notification,
-            args=(customer.nomi if customer else "Noma'lum", sale_info, customer.telegram_chat_id if customer else None)
-        )
-        telegram_thread.daemon = True
-        telegram_thread.start()
+        # Send Telegram notification (faqat sotuv bo'lsa)
+        if adashilgan != 'yes' and customer:
+            sale_info = {
+                "sotuv_id": new_sale.id,
+                "sana": new_sale.sana.strftime('%d.%m.%Y'),
+                "vaqt": uz_datetime().strftime('%H:%M:%S'),
+                "mijoz": customer.nomi if customer else "Noma'lum",
+                "non_turi": non_turi,
+                "miqdor": miqdor,
+                "narx_dona": Decimal(str(narx)),
+                "jami_summa": Decimal(str(jami)),
+                "tolandi": Decimal(str(tolandi)),
+                "qarz": Decimal(str(qarz)),
+                "xodim": current_user.ism
+            }
+            import threading
+            telegram_thread = threading.Thread(
+                target=send_telegram_notification,
+                args=(customer.nomi if customer else "Noma'lum", sale_info, customer.telegram_chat_id if customer else None)
+            )
+            telegram_thread.daemon = True
+            telegram_thread.start()
         
-        flash('Sotuv muvaffaqiyatli amalga oshirildi')
+        if adashilgan == 'yes':
+            flash(f"Brak (adashilgan) qayd etildi: {miqdor} ta {non_turi} qoldiqdan o'chirildi.", 'success')
+        else:
+            flash('Sotuv muvaffaqiyatli amalga oshirildi', 'success')
+            
         return redirect(url_for('sales.list_sales'))
     
     customers = Customer.query.filter_by(status='faol').all()
