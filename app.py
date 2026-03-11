@@ -25,8 +25,13 @@ elif DATABASE_URL.startswith('postgresql://'):
     DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+pg8000://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+migrate = Migrate(app, db)
+
+with app.app_context():
+    db.create_all()
 
 db.init_app(app)
 migrate = Migrate(app, db)
