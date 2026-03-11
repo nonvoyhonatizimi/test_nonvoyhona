@@ -259,3 +259,14 @@ class Eslatma(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('foydalanuvchilar.id'), nullable=True)
     
     foydalanuvchi = db.relationship('User', backref=db.backref('eslatmalar', lazy=True))
+
+class SalaryPayment(db.Model):
+    __tablename__ = 'ish_haqqi_tolov'
+    id = db.Column(db.Integer, primary_key=True)
+    xodim_id = db.Column(db.Integer, db.ForeignKey('xodimlar.id', ondelete='CASCADE'), nullable=False)
+    sana = db.Column(db.Date, nullable=False)  # Qaysi kun uchun ish haqqi tolandi
+    summa = db.Column(db.Numeric(10, 2), nullable=False)
+    izoh = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=uz_datetime)
+    
+    employee = db.relationship('Employee', backref='salary_payments')

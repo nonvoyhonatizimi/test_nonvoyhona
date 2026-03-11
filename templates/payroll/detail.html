@@ -30,30 +30,82 @@
         </div>
     </form>
     
-    <!-- Jami -->
-    <div class="alert alert-success mb-4">
-        <h4 class="mb-0">Jami Ish Haqqi: {{ "{:,.0f}".format(jami_ish_haqqi) }} so'm</h4>
+    <!-- Jami va Izoh qismi -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="alert alert-info mb-0">
+                <h4 class="mb-2">Jami Ish Haqqi: {{ "{:,.0f}".format(jami_ish_haqqi) }} so'm</h4>
+                <h5 class="mb-0 text-success">To'langan: {{ "{:,.0f}".format(jami_tolangan) }} so'm</h5>
+                <h5 class="mb-0 text-danger mt-1">Qolgan: {{ "{:,.0f}".format(jami_ish_haqqi - jami_tolangan) }} so'm</h5>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <label for="umumiy_izoh" class="form-label fw-bold"><i class="fas fa-comment-dots text-primary"></i> To'lov uchun izoh yozish (ixtiyoriy)</label>
+                    <textarea class="form-control" id="umumiy_izoh" rows="2" placeholder="Masalan: Plastikka tashlandi, Avans sifatida..."></textarea>
+                    <small class="text-muted mt-1 d-block">Ushbu izoh "To'lash" tugmasi bosilganda birga saqlanadi.</small>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- Kunlik ish jadvali -->
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Sana</th>
-                <th>Ish Soni</th>
-                <th>Ish Haqqi</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for kun in kunlik_ish %}
-            <tr>
-                <td>{{ kun.sana }}</td>
-                <td>{{ kun.ish_soni }}</td>
-                <td>{{ "{:,.0f}".format(kun.ish_haqqi) }} so'm</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Sana</th>
+                    <th>Ish Soni</th>
+                    <th>Ish Haqqi</th>
+                    <th>Holat</th>
+                    {% if current_user.rol == 'admin' %}
+                    <th>Amal</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for kun in kunlik_ish %}
+                <tr>
+                    <td>{{ kun.sana }}</td>
+                    <td>{{ kun.ish_soni }}</td>
+                    <td>
+                        {% if kun.is_paid %}
+                            <span class="text-success fw-bold">{{ "{:,.0f}".format(kun.ish_haqqi) }} so'm</span>
+                        {% else %}
+                            <span class="text-danger fw-bold">{{ "{:,.0f}".format(kun.ish_haqqi) }} so'm</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if kun.is_paid %}
+                            <span class="badge bg-success"><i class="fas fa-check-circle"></i> To'langan</span>
+                        {% else %}
+                            <span class="badge bg-danger"><i class="fas fa-exclamation-circle"></i> To'lanmagan</span>
+                        {% endif %}
+                    </td>
+                    {% if current_user.rol == 'admin' %}
+                    <td>
+                        {% if not kun.is_paid %}
+                        <form action="{{ url_for('payroll.pay_salary', employee_id=employee.id, yil=yil, oy=oy) }}" method="POST" class="d-inline" onsubmit="return attachIzoh(this)">
+                            <input type="hidden" name="sana" value="{{ kun.sana_obj.strftime('%Y-%m-%d') }}">
+                            <input type="hidden" name="summa" value="{{ kun.ish_haqqi }}">
+                            <input type="hidden" name="izoh" class="hidden_izoh" value="">
+                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Rostdan ham ushbu summani to\'laysizmi?')">
+                                <i class="fas fa-money-bill-wave"></i> To'lash
+                            </button>
+                        </form>
+                        {% else %}
+                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                            To'langan
+                        </button>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     
     {% if kunlik_ish|length == 0 %}
     <div class="alert alert-info">
@@ -61,6 +113,14 @@
     </div>
     {% endif %}
     
-    <a href="{{ url_for('payroll.index') }}" class="btn btn-secondary">Orqaga</a>
+    <a href="{{ url_for('payroll.index') }}" class="btn btn-secondary mt-3">Orqaga qaytish</a>
 </div>
+
+<script>
+function attachIzoh(form) {
+    var izohVal = document.getElementById('umumiy_izoh').value;
+    form.querySelector('.hidden_izoh').value = izohVal;
+    return true;
+}
+</script>
 {% endblock %}
