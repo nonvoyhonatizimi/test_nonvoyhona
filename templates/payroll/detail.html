@@ -40,11 +40,35 @@
             </div>
         </div>
         <div class="col-md-6">
-            <div class="card h-100">
+            <div class="card h-100 border-primary shadow-sm">
                 <div class="card-body">
-                    <label for="umumiy_izoh" class="form-label fw-bold"><i class="fas fa-comment-dots text-primary"></i> To'lov uchun izoh yozish (ixtiyoriy)</label>
-                    <textarea class="form-control" id="umumiy_izoh" rows="2" placeholder="Masalan: Plastikka tashlandi, Avans sifatida..."></textarea>
-                    <small class="text-muted mt-1 d-block">Ushbu izoh "To'lash" tugmasi bosilganda birga saqlanadi.</small>
+                    <label class="form-label fw-bold"><i class="fas fa-comment-dots text-primary"></i> Izoh qoldirish</label>
+                    <form action="{{ url_for('payroll.add_note', employee_id=employee.id, yil=yil, oy=oy) }}" method="POST">
+                        <div class="d-flex align-items-start mb-2">
+                            <input type="date" name="sana" class="form-control me-2" required style="width: 140px;">
+                            <textarea class="form-control me-2" name="izoh" rows="1" placeholder="Izoh yozing..." required></textarea>
+                            <button type="submit" class="btn btn-primary d-flex align-items-center">
+                                <i class="fas fa-save me-1"></i> Saqlash
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-3" style="max-height: 150px; overflow-y: auto;">
+                        {% for kun in kunlik_ish %}
+                            {% for note in kun.notes %}
+                            <div class="mb-2 p-2 bg-light border rounded d-flex justify-content-between align-items-center">
+                                <div class="small">
+                                    <span class="text-primary fw-bold">{{ note.sana.strftime('%d.%m.%Y') }}</span>: {{ note.izoh }}
+                                </div>
+                                {% if current_user.rol == 'admin' %}
+                                <a href="{{ url_for('payroll.delete_note', note_id=note.id, yil=yil, oy=oy) }}" class="btn btn-sm btn-outline-danger py-0 px-2 ms-2" onclick="return confirm('Rostdan ham izohni o\'chirasizmi?')">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -59,7 +83,6 @@
                     <th>Ish Soni</th>
                     <th>Ish Haqqi</th>
                     <th>Holat</th>
-                    <th>Izohlar</th>
                     {% if current_user.rol == 'admin' %}
                     <th>Amal</th>
                     {% endif %}
@@ -91,33 +114,13 @@
                             {% endif %}
                         {% endif %}
                     </td>
-                    <td>
-                        <!-- Mavjud izohlar -->
-                        {% for note in kun.notes %}
-                        <div class="mb-1 p-1 bg-light rounded d-flex justify-content-between align-items-center">
-                            <span class="small">{{ note.izoh }}</span>
-                            {% if current_user.rol == 'admin' %}
-                            <a href="{{ url_for('payroll.delete_note', note_id=note.id, yil=yil, oy=oy) }}" class="text-danger ms-2" onclick="return confirm('Izohni o\'chirasizmi?')" title="O'chirish"><i class="fas fa-times"></i></a>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                        
-                        <!-- Yangi izoh qo'shish -->
-                        {% if current_user.rol == 'admin' %}
-                        <form action="{{ url_for('payroll.add_note', employee_id=employee.id, yil=yil, oy=oy) }}" method="POST" class="mt-1 d-flex">
-                            <input type="hidden" name="sana" value="{{ kun.sana_obj.strftime('%Y-%m-%d') }}">
-                            <input type="text" name="izoh" class="form-control form-control-sm" placeholder="Yangi izoh yozish..." required>
-                            <button type="submit" class="btn btn-sm btn-outline-primary ms-1" title="Saqlash"><i class="fas fa-save"></i></button>
-                        </form>
-                        {% endif %}
-                    </td>
                     {% if current_user.rol == 'admin' %}
                     <td>
                         {% if not kun.is_paid and kun.ish_soni > 0 %}
-                        <form action="{{ url_for('payroll.pay_salary', employee_id=employee.id, yil=yil, oy=oy) }}" method="POST" class="d-inline" onsubmit="return attachIzoh(this)">
+                        <form action="{{ url_for('payroll.pay_salary', employee_id=employee.id, yil=yil, oy=oy) }}" method="POST" class="d-inline">
                             <input type="hidden" name="sana" value="{{ kun.sana_obj.strftime('%Y-%m-%d') }}">
                             <input type="hidden" name="summa" value="{{ kun.ish_haqqi }}">
-                            <input type="hidden" name="izoh" class="hidden_izoh" value="">
+                            <input type="hidden" name="izoh" value="">
                             <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Rostdan ham ushbu summani to\'laysizmi?')">
                                 <i class="fas fa-money-bill-wave"></i> To'lash
                             </button>
@@ -146,11 +149,4 @@
     <a href="{{ url_for('payroll.index') }}" class="btn btn-secondary mt-3">Orqaga qaytish</a>
 </div>
 
-<script>
-function attachIzoh(form) {
-    var izohVal = document.getElementById('umumiy_izoh').value;
-    form.querySelector('.hidden_izoh').value = izohVal;
-    return true;
-}
-</script>
 {% endblock %}

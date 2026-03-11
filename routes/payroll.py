@@ -145,11 +145,10 @@ def detail(employee_id):
         else:
             stavka = emp.ish_haqqi_stavka or 0
         
-        # We always want to show the day if there is a note, even if ish_soni is 0
         day_notes = note_map.get(ish_kuni, [])
         payment = payment_map.get(ish_kuni)
         
-        if ish_soni > 0 or day_notes or payment:
+        if ish_soni > 0 or payment:
             from decimal import Decimal
             ish_haqqi = Decimal(str(ish_soni)) * Decimal(str(stavka))
             jami_ish_haqqi += ish_haqqi
@@ -198,7 +197,7 @@ def pay_salary(employee_id):
     summa = float(request.form.get('summa', 0))
     izoh = request.form.get('izoh', '')
     
-    if not sana_str or summa <= 0:
+    if not sana_str or (summa <= 0 and not izoh):
         flash("Noto'g'ri ma'lumotlar!", "error")
         return redirect(url_for('payroll.detail', employee_id=employee_id))
         
@@ -221,9 +220,8 @@ def pay_salary(employee_id):
             created_at=uz_datetime()
         )
         db.session.add(new_payment)
-        
         db.session.commit()
-        flash(f"{sana.strftime('%d.%m.%Y')} sanasi uchun {summa:,.0f} so'm to'landi!", "success")
+        flash(f"{sana.strftime('%d.%m.%Y')} sanasi uchun to'lov saqlandi!", "success")
         
     # URL argumentlari orqali yil va oyni saqlab qolish
     yil = request.args.get('yil', date.today().year)
