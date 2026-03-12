@@ -209,6 +209,75 @@ def list_sales():
                          history_dates=history_dates,
                          today=today)
 
+@sales_bp.route('/bulk-pay-debt', methods=['POST'])
+@login_required
+def bulk_pay_debt():
+    from decimal import Decimal
+    from models import Cash, DayStatus
+    
+    sale_ids_str = request.form.get('sale_ids', '')
+    if not sale_ids_str:
+        flash('Hech qanday qarz tanlanmagan!', 'error')
+        return redirect(url_for('sales.list_sales'))
+    
+    sale_ids = [int(sid) for sid in sale_ids_str.split(',') if sid.isdigit()]
+    if not sale_ids:
+        flash('Noto\'g\'ri ma\'lumotlar!', 'error')
+        return redirect(url_for('sales.list_sales'))
+    
+    total_paid = Decimal('0')
+    count = 0
+    
+    # Hozirgi ochiq smenani aniqlash
+    open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
+    current_smena = open_smena.smena if open_smena else 1
+    today = datetime.now().date()
+    
+    for sid in sale_ids:
+        sale = Sale.query.get(sid)
+        if not sale or sale.qoldiq_qarz <= 0:
+            continue
+            
+        payment = sale.qoldiq_qarz
+        total_paid += payment
+        count += 1
+        
+        # Update sale
+        sale.tolandi += payment
+        sale.qoldiq_qarz = 0
+        
+        # Update customer debt
+        customer = Customer.query.get(sale.mijoz_id)
+        if customer:
+            customer.jami_qarz -= payment
+            
+        # Agar bugun sotuv qilingan bo'lsa, kassaga qo'shish
+        if sale.sana == today:
+            last_cash = Cash.query.order_by(Cash.id.desc()).first()
+            current_balance = last_cash.balans if last_cash else Decimal('0')
+            new_cash = Cash(
+                sana=today,
+                kirim=payment,
+                balans=current_balance + payment,
+                izoh=f"Qarz to'lovi: {customer.nomi if customer else 'Nomalum'} (bugun)",
+                turi='Qarz to\'lovi'
+            )
+            db.session.add(new_cash)
+            
+        # Driver payment
+        driver_payment = DriverPayment.query.filter_by(sale_id=sale.id).first()
+        if driver_payment:
+            driver_payment.status = 'tolandi'
+            driver_payment.collected_at = uz_datetime()
+            driver_payment.summa = payment
+            driver_payment.smena = current_smena
+            if current_user.employee_id:
+                driver_payment.driver_id = current_user.employee_id
+                
+    db.session.commit()
+    flash(f'{count} ta qarz uchun jami {float(total_paid):,.0f} so\'m to\'landi!', 'success')
+    return redirect(url_for('sales.list_sales'))
+
 @sales_bp.route('/pay-debt/<int:sale_id>', methods=['GET', 'POST'])
 @login_required
 def pay_debt(sale_id):

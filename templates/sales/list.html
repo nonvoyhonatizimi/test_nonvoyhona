@@ -69,10 +69,37 @@
             </div>
         </form>
 
+        <!-- Ommaviy amallar paneli (Sticky) -->
+        <div id="bulk-actions" class="sticky-top bg-white py-3 border-bottom mb-3 d-none" style="top: 0; z-index: 1020;">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center bg-success text-white p-3 rounded-4 shadow-sm">
+                    <div>
+                        <i class="fas fa-check-double me-2"></i>
+                        <span id="selected-count" class="fw-bold">0</span> ta qarz tanlandi
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="me-4 text-end">
+                            <div class="small opacity-75">Jami to'lov:</div>
+                            <div id="selected-total" class="h4 mb-0 fw-bold">0 so'm</div>
+                        </div>
+                        <form id="bulk-pay-form" method="POST" action="{{ url_for('sales.bulk_pay_debt') }}">
+                            <input type="hidden" name="sale_ids" id="sale_ids_input">
+                            <button type="submit" class="btn btn-light text-success fw-bold px-4 rounded-pill" onclick="return confirm('Tanlangan barcha qarzlarni to\'langan deb belgilaysizmi?')">
+                                <i class="fas fa-money-bill-wave me-2"></i> Tanlanganlarni to'lash
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table class="table table-hover align-middle" id="sales-table">
                 <thead class="table-light">
                     <tr>
+                        <th width="40">
+                            <input type="checkbox" class="form-check-input" id="select-all" title="Hammasini tanlash">
+                        </th>
                         <th>Sana</th>
                         <th>Soat</th>
                         <th>Mijoz</th>
@@ -88,7 +115,16 @@
                 </thead>
                 <tbody>
                     {% for sale in sales %}
-                    <tr>
+                    <tr class="{% if sale.qoldiq_qarz > 0 %}table-warning-subtle{% endif %}">
+                        <td>
+                            {% if sale.qoldiq_qarz > 0 %}
+                            <input type="checkbox" class="form-check-input sale-checkbox" 
+                                   data-id="{{ sale.id }}" 
+                                   data-qarz="{{ sale.qoldiq_qarz }}">
+                            {% else %}
+                            <i class="fas fa-check-circle text-success opacity-50"></i>
+                            {% endif %}
+                        </td>
                         <td>{{ sale.sana.strftime('%d.%m.%Y') }}</td>
                         <td>{{ sale.created_at.strftime('%H:%M') if sale.created_at else '-' }}</td>
                         <td>{{ sale.customer.nomi if sale.customer else 'Noma\'lum' }}</td>
@@ -300,6 +336,47 @@ document.addEventListener('click', function(e) {
     if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) {
         suggestions.style.display = 'none';
     }
+});
+
+// Ommaviy to'lov (Bulk Payment) Logic
+const selectAll = document.getElementById('select-all');
+const checkboxes = document.querySelectorAll('.sale-checkbox');
+const bulkActions = document.getElementById('bulk-actions');
+const selectedCount = document.getElementById('selected-count');
+const selectedTotal = document.getElementById('selected-total');
+const saleIdsInput = document.getElementById('sale_ids_input');
+
+function updateBulkUI() {
+    let checked = document.querySelectorAll('.sale-checkbox:checked');
+    let total = 0;
+    let ids = [];
+    
+    checked.forEach(cb => {
+        total += parseFloat(cb.getAttribute('data-qarz'));
+        ids.push(cb.getAttribute('data-id'));
+    });
+    
+    if (checked.length > 0) {
+        bulkActions.classList.remove('d-none');
+        selectedCount.innerText = checked.length;
+        selectedTotal.innerText = total.toLocaleString() + ' so\'m';
+        saleIdsInput.value = ids.join(',');
+    } else {
+        bulkActions.classList.add('d-none');
+    }
+}
+
+if (selectAll) {
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => {
+            cb.checked = this.checked;
+        });
+        updateBulkUI();
+    });
+}
+
+checkboxes.forEach(cb => {
+    cb.addEventListener('change', updateBulkUI);
 });
 </script>
 {% endblock %}
