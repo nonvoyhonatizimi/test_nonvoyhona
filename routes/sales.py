@@ -391,8 +391,11 @@ def add_sale():
         
         # Inventory tekshirish - haydovchida yetarli non bormi? (original non turi bilan tekshiriladi)
         # Agar admin o'zi uchun sotayotgan bo'lsa (va xodim emas bo'lsa), tekshirmaydi
-        check_xodim_id = request.form.get('xodim_id')
-        if not check_xodim_id and current_user.employee_id:
+        check_xodim_id_str = request.form.get('xodim_id')
+        check_xodim_id = None
+        if check_xodim_id_str and check_xodim_id_str.isdigit():
+            check_xodim_id = int(check_xodim_id_str)
+        elif not check_xodim_id_str and current_user.employee_id:
             check_xodim_id = current_user.employee_id
             
         if check_xodim_id:
