@@ -199,11 +199,25 @@ def list_sales():
             'driver': driver
         })
     
+    # Jami hisoblar va Naqt sotuvlar
+    naqt_sotuvlar = []
+    jami_naqt = 0
+    jami_qarz = 0
+    
+    for s in sales:
+        if s.tolandi > 0:
+            naqt_sotuvlar.append(s)
+            jami_naqt += float(s.tolandi)
+        jami_qarz += float(s.qoldiq_qarz)
+    
     return render_template('sales/list.html', 
                          sales=sales, 
                          tandir_transfers=tandir_transfers, 
                          haydovchi_transfers=haydovchi_transfers, 
                          driver_inventory=driver_inventory,
+                         naqt_sotuvlar=naqt_sotuvlar,
+                         jami_naqt=jami_naqt,
+                         jami_qarz=jami_qarz,
                          customer_name=customer_name,
                          filter_date=filter_date,
                          history_dates=history_dates,
@@ -376,17 +390,22 @@ def add_sale():
             non_turi_saqlash = non_turi
         
         # Inventory tekshirish - haydovchida yetarli non bormi? (original non turi bilan tekshiriladi)
-        if current_user.employee_id:
+        # Agar admin o'zi uchun sotayotgan bo'lsa (va xodim emas bo'lsa), tekshirmaydi
+        check_xodim_id = request.form.get('xodim_id')
+        if not check_xodim_id and current_user.employee_id:
+            check_xodim_id = current_user.employee_id
+            
+        if check_xodim_id:
             from sqlalchemy import func
             total_miqdor = db.session.query(
                 func.sum(DriverInventory.miqdor)
             ).filter_by(
-                driver_id=current_user.employee_id,
+                driver_id=check_xodim_id,
                 non_turi=non_turi
             ).scalar() or 0
             
             if total_miqdor < miqdor:
-                flash(f'Sizda yetarli {non_turi} yo\'q! (Mavjud: {total_miqdor} dona, Kerak: {miqdor} dona)', 'error')
+                flash(f'Tanlangan haydovchida yetarli {non_turi} yo\'q! (Mavjud: {total_miqdor} dona, Kerak: {miqdor} dona)', 'error')
                 return redirect(url_for('sales.add_sale'))
         
         # Oxirgi ochiq smenani topish
@@ -396,6 +415,16 @@ def add_sale():
         else:
             current_smena = 1
         
+        # Xodimni aniqlash
+        form_xodim_id = request.form.get('xodim_id')
+        if form_xodim_id and form_xodim_id.isdigit():
+            xodim_id = int(form_xodim_id)
+            selected_employee = Employee.query.get(xodim_id)
+            xodim_nomi = selected_employee.ism if selected_employee else current_user.ism
+        else:
+            xodim_id = current_user.employee_id
+            xodim_nomi = current_user.ism
+
         new_sale = Sale(
             sana=datetime.now().date(),
             smena=current_smena,
@@ -406,8 +435,8 @@ def add_sale():
             jami_summa=jami,
             tolandi=tolandi,
             qoldiq_qarz=qarz,
-            xodim=current_user.ism,
-            xodim_id=current_user.employee_id
+            xodim=xodim_nomi,
+            xodim_id=xodim_id
         )
         
         # Update customer debt and cash if not adashilgan
@@ -435,10 +464,10 @@ def add_sale():
         db.session.commit()
         
         # Inventorydan non ayirish (original non_turi orqali)
-        if current_user.employee_id:
+        if xodim_id:
             remaining = miqdor
             inventories = DriverInventory.query.filter_by(
-                driver_id=current_user.employee_id,
+                driver_id=xodim_id,
                 non_turi=non_turi
             ).order_by(DriverInventory.sana.desc()).all()
             
@@ -460,10 +489,10 @@ def add_sale():
                 db.session.commit()
         
         # Avtomatik Haydovchi to'lovi yaratish
-        if qarz > 0 and current_user.employee_id and mijoz_id:
+        if qarz > 0 and xodim_id and mijoz_id:
             driver_payment = DriverPayment(
                 sale_id=new_sale.id,
-                driver_id=current_user.employee_id,
+                driver_id=xodim_id,
                 mijoz_id=mijoz_id,
                 summa=qarz,
                 smena=current_smena,
@@ -504,7 +533,11 @@ def add_sale():
     
     customers = Customer.query.filter_by(status='faol').all()
     bread_types = BreadType.query.order_by(BreadType.nomi).all()
-    return render_template('sales/add.html', customers=customers, bread_types=bread_types)
+    haydovchilar = Employee.query.filter_by(lavozim='Haydovchi', status='faol').all()
+    return render_template('sales/add.html', 
+                         customers=customers, 
+                         bread_types=bread_types, 
+                         haydovchilar=haydovchilar)
 
 @sales_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -518,13 +551,67 @@ def edit_sale(id):
         old_qarz = sale.qoldiq_qarz
         old_tolandi = sale.tolandi
         old_mijoz_id = sale.mijoz_id
+        old_xodim_id = sale.xodim_id
         
+        # Inventoryni yangilash
+        new_xodim_id_str = request.form.get('xodim_id')
+        new_xodim_id = int(new_xodim_id_str) if new_xodim_id_str and new_xodim_id_str.isdigit() else None
         new_mijoz_id_str = request.form.get('mijoz_id')
         new_mijoz_id = int(new_mijoz_id_str) if new_mijoz_id_str and new_mijoz_id_str.isdigit() else None
-        
+        new_miqdor = int(request.form.get('miqdor', 0))
+        new_non_turi = request.form.get('non_turi')
+
+
+        # Agar xodim yoki miqdor yoki non turi o'zgargan bo'lsa
+        if old_xodim_id != new_xodim_id or sale.miqdor != new_miqdor or sale.non_turi != new_non_turi:
+            # 1. Eski xodimga nonni qaytarish (agar bo'lsa)
+            if old_xodim_id:
+                old_inv = DriverInventory.query.filter_by(
+                    driver_id=old_xodim_id,
+                    non_turi=sale.non_turi,
+                    sana=sale.sana
+                ).first()
+                if old_inv:
+                    old_inv.miqdor += sale.miqdor
+                else:
+                    new_old_inv = DriverInventory(
+                        driver_id=old_xodim_id,
+                        non_turi=sale.non_turi,
+                        miqdor=sale.miqdor,
+                        sana=sale.sana
+                    )
+                    db.session.add(new_old_inv)
+
+            # 2. Yangi xodimdan nonni ayirish (agar bo'lsa)
+            if new_xodim_id:
+                # Inventory yetarliligini tekshirish (ixtiyoriy, lekin yaxshi)
+                remaining = new_miqdor
+                inventories = DriverInventory.query.filter_by(
+                    driver_id=new_xodim_id,
+                    non_turi=new_non_turi
+                ).order_by(DriverInventory.sana.desc()).all()
+                
+                for inv in inventories:
+                    if remaining <= 0: break
+                    if inv.miqdor >= remaining:
+                        inv.miqdor -= remaining
+                        remaining = 0
+                    else:
+                        remaining -= inv.miqdor
+                        inv.miqdor = 0
+                
+                if remaining > 0:
+                    flash(f"Ogohlantirish: Yangi xodimda {remaining} ta non yetishmadi, lekin sotuv saqlandi.", "warning")
+
+        # Update sale fields
         sale.mijoz_id = new_mijoz_id
-        sale.non_turi = request.form.get('non_turi')
-        sale.miqdor = int(request.form.get('miqdor', 0))
+        sale.xodim_id = new_xodim_id
+        if new_xodim_id:
+            emp = Employee.query.get(new_xodim_id)
+            if emp: sale.xodim = emp.ism
+        
+        sale.non_turi = new_non_turi
+        sale.miqdor = new_miqdor
         narx = Decimal(str(request.form.get('narx', 0)))
         sale.narx_dona = narx
         sale.jami_summa = sale.miqdor * narx
@@ -568,7 +655,8 @@ def edit_sale(id):
                     db.session.add(new_customer)
         
         # Agar to'lov qilingan bo'lsa (tolandi o'zgargan), haydovchi to'lovini ham yangilash
-        new_tolandi = Decimal(str(request.form.get('tolandi', 0)))
+        # (Template-da tahrirlab bo'lmaydi deyilibdi, lekin har ehtimolga qarshi qoldiramiz)
+        new_tolandi = Decimal(str(request.form.get('tolandi', old_tolandi)))
         if new_tolandi > old_tolandi:
             # Qancha to'langanini hisoblash
             tolangan_qism = new_tolandi - old_tolandi
@@ -579,13 +667,23 @@ def edit_sale(id):
                 # To'langan summani yangilash (faqat to'langan qismi)
                 driver_payment.summa = tolangan_qism
         
+        # Haydovchi to'lovi xodimini ham yangilash
+        driver_payment = DriverPayment.query.filter_by(sale_id=sale.id).first()
+        if driver_payment and new_xodim_id:
+            driver_payment.driver_id = new_xodim_id
+        
         db.session.commit()
         flash('Sotuv ma\'lumoti yangilandi', 'success')
         return redirect(url_for('sales.list_sales'))
     
     customers = Customer.query.filter_by(status='faol').all()
     bread_types = BreadType.query.order_by(BreadType.nomi).all()
-    return render_template('sales/edit.html', sale=sale, customers=customers, bread_types=bread_types)
+    haydovchilar = Employee.query.filter_by(lavozim='Haydovchi', status='faol').all()
+    return render_template('sales/edit.html', 
+                         sale=sale, 
+                         customers=customers, 
+                         bread_types=bread_types, 
+                         haydovchilar=haydovchilar)
 
 @sales_bp.route('/delete/<int:id>')
 @login_required

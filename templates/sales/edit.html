@@ -10,6 +10,21 @@
             <div class="card-body p-4">
                 <form method="POST">
                     <div class="mb-3">
+                        <label for="xodim_id" class="form-label">Sotuvchi (Haydovchi)</label>
+                        <select class="form-select border-primary" id="xodim_id" name="xodim_id" required>
+                            {% if current_user.rol == 'admin' %}
+                                <option value="">--- Haydovchini tanlang ---</option>
+                                {% for h in haydovchilar %}
+                                <option value="{{ h.id }}" {% if sale.xodim_id == h.id %}selected{% endif %}>{{ h.ism }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="{{ sale.xodim_id }}" selected>{{ sale.xodim }}</option>
+                            {% endif %}
+                        </select>
+                        <small class="text-muted">Non qoldig'i shu xodimdan ayiriladi</small>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="mijoz_id" class="form-label">Mijoz</label>
                         <select class="form-select" id="mijoz_id" name="mijoz_id" required>
                             {% for customer in customers %}

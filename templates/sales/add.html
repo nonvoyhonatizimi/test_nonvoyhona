@@ -29,6 +29,26 @@
                     To'langan summa jami summadan oshib ketishi mumkin emas!
                 </div>
                 <form id="sale-form" method="POST" onsubmit="return validateSale()">
+                    <!-- Haydovchi tanlash (faqat admin yoki hamma uchun) -->
+                    <div class="mb-3">
+                        <label for="xodim_id" class="form-label">Sotuvchi (Haydovchi)</label>
+                        <select class="form-select border-primary" id="xodim_id" name="xodim_id" required>
+                            {% if current_user.rol == 'admin' %}
+                                <option value="">--- Haydovchini tanlang ---</option>
+                                {% for h in haydovchilar %}
+                                <option value="{{ h.id }}" {% if current_user.employee_id == h.id %}selected{% endif %}>{{ h.ism }}</option>
+                                {% endfor %}
+                            {% else %}
+                                {% if current_user.employee_id %}
+                                <option value="{{ current_user.employee_id }}" selected>{{ current_user.ism }} (Siz)</option>
+                                {% else %}
+                                <option value="">Xodim aniqlanmadi</option>
+                                {% endif %}
+                            {% endif %}
+                        </select>
+                        <small class="text-muted">Non qoldig'i shu xodimdan ayiriladi</small>
+                    </div>
+
                     <div id="mijoz_div" class="mb-3">
                         <label for="mijoz_search" class="form-label">Mijoz qidirish</label>
                         <input type="text" class="form-control mb-2" id="mijoz_search" placeholder="Mijoz nomini yozing..." onkeyup="filterCustomers()">
