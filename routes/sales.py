@@ -906,7 +906,35 @@ def delete_transfer(id):
         return redirect(url_for('sales.list_sales'))
     
     transfer = BreadTransfer.query.get_or_404(id)
+    # Inventoryni to'g'irlash
+    from_id = transfer.from_xodim_id
+    to_id = transfer.to_xodim_id
+    
+    for i in range(1, 5):
+        turi = getattr(transfer, f'non_turi_{i}')
+        miqdor = getattr(transfer, f'non_miqdor_{i}')
+        if turi and miqdor > 0:
+            # 1. Kimga berilgan bo'lsa o'shandan ayirish
+            to_inv = DriverInventory.query.filter_by(driver_id=to_id, non_turi=turi, sana=transfer.sana).first()
+            if to_inv:
+                to_inv.miqdor -= miqdor
+                if to_inv.miqdor < 0: to_inv.miqdor = 0
+            
+            # 2. Kimdan olingan bo'lsa o'shanga qaytarish
+            from_inv = DriverInventory.query.filter_by(driver_id=from_id, non_turi=turi, sana=transfer.sana).first()
+            if from_inv:
+                from_inv.miqdor += miqdor
+            else:
+                new_from_inv = DriverInventory(
+                    driver_id=from_id,
+                    non_turi=turi,
+                    miqdor=miqdor,
+                    sana=transfer.sana
+                )
+                db.session.add(new_from_inv)
+
     db.session.delete(transfer)
+
     db.session.commit()
     flash('O\'tkazish o\'chirildi!', 'success')
     return redirect(url_for('sales.list_transfers'))

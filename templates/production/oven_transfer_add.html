@@ -8,7 +8,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-body p-4">
-                <form method="POST">
+                <form method="POST" id="transferForm">
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="from_xodim_id" class="form-label">Kimdan (Tandirchi)</label>
@@ -56,10 +56,18 @@
                     {% endfor %}
                     
                     <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary">Saqlash</button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">Saqlash</button>
                         <a href="{{ url_for('production.list_oven') }}" class="btn btn-light">Bekor qilish</a>
                     </div>
                 </form>
+
+                <script>
+                    document.getElementById('transferForm').addEventListener('submit', function() {
+                        const btn = document.getElementById('submitBtn');
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saqlanmoqda...';
+                    });
+                </script>
             </div>
         </div>
     </div>

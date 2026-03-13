@@ -648,7 +648,24 @@ def delete_oven_transfer(id):
         flash('Bu o\'tkazishni o\'chirish huquqingiz yo\'q!', 'error')
         return redirect(url_for('production.list_oven'))
     
+    # Haydovchidan nonni ayirib tashlash (inventoryni to'g'irlash)
+    to_id = transfer.to_xodim_id
+    for i in range(1, 5):
+        turi = getattr(transfer, f'non_turi_{i}')
+        miqdor = getattr(transfer, f'non_miqdor_{i}')
+        if turi and miqdor > 0:
+            inv = DriverInventory.query.filter_by(
+                driver_id=to_id,
+                non_turi=turi,
+                sana=transfer.sana
+            ).first()
+            if inv:
+                inv.miqdor -= miqdor
+                if inv.miqdor < 0: inv.miqdor = 0
+                inv.updated_at = uz_datetime()
+    
     db.session.delete(transfer)
+
     db.session.commit()
     flash('O\'tkazish o\'chirildi!', 'success')
     return redirect(url_for('production.list_oven'))
