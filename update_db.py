@@ -8,8 +8,12 @@ def update_database():
             # Foydalanuvchilar jadvaliga customer_id ustunini qo'shish
             db.session.execute(text("ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES mijozlar(id)"))
             
-            # Kassa jadvaliga smena ustunini qo'shish
+            # Kassa jadvaliga yangi ustunlar qo'shish
             db.session.execute(text("ALTER TABLE kassa ADD COLUMN IF NOT EXISTS smena INTEGER DEFAULT 1"))
+            db.session.execute(text("ALTER TABLE kassa ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES foydalanuvchilar(id)"))
+            
+            # Haydovchi to'lovlari jadvaliga collector_id qo'shish
+            db.session.execute(text("ALTER TABLE haydovchi_tolovlari ADD COLUMN IF NOT EXISTS collector_id INTEGER REFERENCES xodimlar(id)"))
             
             db.session.commit()
             print("✅ Ustunlar muvaffaqiyatli qo'shildi (yoki allaqachon mavjud).")

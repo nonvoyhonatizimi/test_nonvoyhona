@@ -142,6 +142,23 @@ def pay_selected_debts(customer_id):
                 sale.tolandi = (sale.tolandi or Decimal('0')) + qarz
                 sale.qoldiq_qarz = Decimal('0')
                 total_paid += qarz
+                
+                # DriverPayment ni yangilash (Hisobot uchun muhim)
+                from models import DriverPayment, uz_datetime
+                # Hozirgi ochiq smenani aniqlash (faqat bir marta tepada aniqlaymiz)
+                if 'current_smena' not in locals():
+                    from models import DayStatus
+                    open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
+                    current_smena = open_smena.smena if open_smena else 1
+
+                dp = DriverPayment.query.filter_by(sale_id=sale.id).first()
+                if dp:
+                    dp.status = 'tolandi'
+                    dp.collected_at = uz_datetime()
+                    dp.summa = qarz
+                    dp.smena = current_smena
+                    if current_user.employee_id:
+                        dp.collector_id = current_user.employee_id
             
             if sales:
                 dates_paid_count += 1
@@ -155,10 +172,13 @@ def pay_selected_debts(customer_id):
                 customer.jami_qarz = Decimal('0')
         
         # Kassaga qo'shish
-        from models import Cash, DayStatus
-        open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
-        current_smena = open_smena.smena if open_smena else 1
-        
+        from models import Cash
+        # current_smena allaqachon tepada aniqlangan bo'lishi mumkin
+        if 'current_smena' not in locals():
+            from models import DayStatus
+            open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
+            current_smena = open_smena.smena if open_smena else 1
+            
         last_cash = Cash.query.order_by(Cash.id.desc()).first()
         current_balance = last_cash.balans if last_cash else Decimal('0')
         new_cash = Cash(
@@ -167,7 +187,8 @@ def pay_selected_debts(customer_id):
             kirim=total_paid,
             balans=current_balance + total_paid,
             izoh=f"Qarz to'lovi: {customer.nomi if customer else 'Nomalum'} (multi-sana)",
-            turi='Qarz to\'lovi'
+            turi='Qarz to\'lovi',
+            user_id=current_user.id
         )
         db.session.add(new_cash)
         db.session.commit()
@@ -497,14 +518,28 @@ def daily_sales():
             driver_sales[driver_name]['naqt_sotuvlar'].append(sale)
             driver_sales[driver_name]['jami_naqt'] += sale.tolandi
     
-    # Qarz to'lovlarini olish (Kassadan)
-    from models import Cash
-    qarz_tolovlari = Cash.query.filter_by(
-        smena=current_smena,
-        turi='Qarz to\'lovi'
+    # Qarz to'lovlarini olish (Haydovchi to'lovlari orqali - batafsil ma'lumot uchun)
+    from models import DriverPayment
+    from sqlalchemy.orm import joinedload
+    
+    qarz_tolovlari_details = DriverPayment.query.options(
+        joinedload(DriverPayment.sale),
+        joinedload(DriverPayment.driver),
+        joinedload(DriverPayment.collector),
+        joinedload(DriverPayment.mijoz)
+    ).filter(
+        DriverPayment.smena == current_smena,
+        DriverPayment.status == 'tolandi'
     ).all()
+    
+    # Faqat eski qarzlar (sotuv smenasi hozirgidan kichik bo'lganlar)
+    qarz_tolovlari = []
+    for p in qarz_tolovlari_details:
+        if p.sale and p.sale.smena < current_smena:
+            qarz_tolovlari.append(p)
+    
     from decimal import Decimal
-    jami_qarz_tolovlari = sum([Decimal(str(c.kirim)) for c in qarz_tolovlari])
+    jami_qarz_tolovlari = sum([Decimal(str(p.summa)) for p in qarz_tolovlari])
     
     # O'tkazishlarni olish (sana filtrisiz)
     tandirchi_transfers = BreadTransfer.query.filter(

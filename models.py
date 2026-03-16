@@ -146,6 +146,9 @@ class Cash(db.Model):
     izoh = db.Column(db.String(200))
     turi = db.Column(db.String(50))  # Sotuv, Xarajat, Ish haqqi
     smena = db.Column(db.Integer, default=1)  # Smena raqami
+    user_id = db.Column(db.Integer, db.ForeignKey('foydalanuvchilar.id'), nullable=True) # Kim kiritdi
+    
+    user = db.relationship('User', backref='cash_entries')
 
 class Log(db.Model):
     __tablename__ = 'jurnal'
@@ -219,9 +222,11 @@ class DriverPayment(db.Model):
     status = db.Column(db.String(20), default='kutilmoqda')  # kutilmoqda, tolandi
     created_at = db.Column(db.DateTime, default=uz_datetime)
     collected_at = db.Column(db.DateTime, nullable=True)
+    collector_id = db.Column(db.Integer, db.ForeignKey('xodimlar.id'), nullable=True) # Pulni olgan haydovchi/xodim
     
     sale = db.relationship('Sale', backref=db.backref('driver_payment', cascade='all, delete-orphan', passive_deletes=True))
-    driver = db.relationship('Employee', backref='payments')
+    driver = db.relationship('Employee', foreign_keys=[driver_id], backref='payments_made')
+    collector = db.relationship('Employee', foreign_keys=[collector_id], backref='payments_collected')
     mijoz = db.relationship('Customer', backref='driver_payments')
 
 class DriverInventory(db.Model):

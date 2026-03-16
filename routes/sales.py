@@ -280,7 +280,8 @@ def bulk_pay_debt():
             kirim=payment,
             balans=current_balance + payment,
             izoh=cash_izoh,
-            turi=cash_turi
+            turi=cash_turi,
+            user_id=current_user.id  # Kim kiritdi
         )
         db.session.add(new_cash)
             
@@ -291,8 +292,9 @@ def bulk_pay_debt():
             driver_payment.collected_at = uz_datetime()
             driver_payment.summa = payment
             driver_payment.smena = current_smena
+            # MUHIM: seller_id (driver_id) o'zgarmasin, collector_id ni o'rnatamiz
             if current_user.employee_id:
-                driver_payment.driver_id = current_user.employee_id
+                driver_payment.collector_id = current_user.employee_id
                 
     db.session.commit()
     flash(f'{count} ta qarz uchun jami {float(total_paid):,.0f} so\'m to\'landi!', 'success')
@@ -343,7 +345,8 @@ def pay_debt(sale_id):
             kirim=payment,
             balans=current_balance + payment,
             izoh=cash_izoh,
-            turi=cash_turi
+            turi=cash_turi,
+            user_id=current_user.id
         )
         db.session.add(new_cash)
         
@@ -363,7 +366,7 @@ def pay_debt(sale_id):
             driver_payment.summa = payment
             driver_payment.smena = current_smena  # To'lov qilingan smena
             if current_user.employee_id:
-                driver_payment.driver_id = current_user.employee_id
+                driver_payment.collector_id = current_user.employee_id  # Pulni olgan odam
             print(f"[DEBUG pay_debt] Yangilandi: Sale.smena={sale.smena}, Payment.smena={current_smena}")
         
         db.session.commit()
@@ -470,7 +473,8 @@ def add_sale():
                     kirim=tolandi,
                     balans=current_balance + tolandi,
                     izoh=f"Sotuv: {customer.nomi if customer else 'Noma`lum'}",
-                    turi='Sotuv'
+                    turi='Sotuv',
+                    user_id=current_user.id
                 )
                 db.session.add(new_cash)
             

@@ -106,17 +106,38 @@
             <table class="table table-sm table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Vaqt</th>
-                        <th>Izoh</th>
+                        <th>To'lov vaqti</th>
+                        <th>Sotuv vaqti</th>
+                        <th>Mijoz</th>
+                        <th>Sotuvchi</th>
+                        <th>Nima sotilgan</th>
+                        <th>Pulni olgan</th>
                         <th class="text-end">Summa</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for q in qarz_tolovlari %}
                     <tr>
-                        <td>{{ q.created_at.strftime('%H:%M') if q.created_at else '-' }}</td>
-                        <td>{{ q.izoh }}</td>
-                        <td class="text-end fw-bold text-success">{{ "{:,.0f}".format(q.kirim) }} so'm</td>
+                        <td>{{ q.collected_at.strftime('%H:%M') if q.collected_at else '-' }}</td>
+                        <td>
+                            <small class="text-muted d-block">{{ q.sale.sana.strftime('%d.%m') if q.sale else '-' }}</small>
+                            {{ q.sale.created_at.strftime('%H:%M') if q.sale and q.sale.created_at else '-' }}
+                        </td>
+                        <td>{{ q.mijoz.nomi }}</td>
+                        <td>{{ q.driver.ism if q.driver else q.sale.xodim }}</td>
+                        <td>
+                            {% if q.sale %}
+                                {{ q.sale.non_turi }} ({{ q.sale.miqdor }} ta)
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark fw-normal border">
+                                {{ q.collector.ism if q.collector else 'Admin' }}
+                            </span>
+                        </td>
+                        <td class="text-end fw-bold text-success">{{ "{:,.0f}".format(q.summa) }} so'm</td>
                     </tr>
                     {% endfor %}
                 </tbody>

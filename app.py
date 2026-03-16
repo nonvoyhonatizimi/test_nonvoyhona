@@ -163,6 +163,8 @@ def init_db():
         try:
             db.session.execute(text("ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES mijozlar(id)"))
             db.session.execute(text("ALTER TABLE kassa ADD COLUMN IF NOT EXISTS smena INTEGER DEFAULT 1"))
+            db.session.execute(text("ALTER TABLE kassa ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES foydalanuvchilar(id)"))
+            db.session.execute(text("ALTER TABLE haydovchi_tolovlari ADD COLUMN IF NOT EXISTS collector_id INTEGER REFERENCES xodimlar.id"))
             db.session.commit()
         except Exception as e:
             db.session.rollback()
