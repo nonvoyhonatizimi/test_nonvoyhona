@@ -503,7 +503,8 @@ def daily_sales():
         smena=current_smena,
         turi='Qarz to\'lovi'
     ).all()
-    jami_qarz_tolovlari = sum([float(c.kirim) for c in qarz_tolovlari])
+    from decimal import Decimal
+    jami_qarz_tolovlari = sum([Decimal(str(c.kirim)) for c in qarz_tolovlari])
     
     # O'tkazishlarni olish (sana filtrisiz)
     tandirchi_transfers = BreadTransfer.query.filter(
