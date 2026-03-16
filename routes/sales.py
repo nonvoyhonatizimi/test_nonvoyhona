@@ -295,6 +295,20 @@ def bulk_pay_debt():
             # MUHIM: seller_id (driver_id) o'zgarmasin, collector_id ni o'rnatamiz
             if current_user.employee_id:
                 driver_payment.collector_id = current_user.employee_id
+        else:
+            # Agar oldingi sotuvlarda DriverPayment bo'lmagan bo'lsa, yangi yaratamiz
+            new_dp = DriverPayment(
+                sale_id=sale.id,
+                driver_id=sale.xodim_id or 1,
+                mijoz_id=sale.mijoz_id,
+                summa=payment,
+                smena=current_smena,
+                status='tolandi',
+                created_at=sale.created_at,
+                collected_at=uz_datetime(),
+                collector_id=current_user.employee_id if current_user.employee_id else None
+            )
+            db.session.add(new_dp)
                 
     db.session.commit()
     flash(f'{count} ta qarz uchun jami {float(total_paid):,.0f} so\'m to\'landi!', 'success')
@@ -368,6 +382,21 @@ def pay_debt(sale_id):
             if current_user.employee_id:
                 driver_payment.collector_id = current_user.employee_id  # Pulni olgan odam
             print(f"[DEBUG pay_debt] Yangilandi: Sale.smena={sale.smena}, Payment.smena={current_smena}")
+        else:
+            # Agar mavjud bo'lmasa, yangi yaratamiz
+            new_dp = DriverPayment(
+                sale_id=sale.id,
+                driver_id=sale.xodim_id or 1,
+                mijoz_id=sale.mijoz_id,
+                summa=payment,
+                smena=current_smena,
+                status='tolandi',
+                created_at=sale.created_at,
+                collected_at=uz_datetime(),
+                collector_id=current_user.employee_id if current_user.employee_id else None
+            )
+            db.session.add(new_dp)
+            print(f"[DEBUG pay_debt] Yangi yaratildi: Sale.smena={sale.smena}, Payment.smena={current_smena}")
         
         db.session.commit()
         
