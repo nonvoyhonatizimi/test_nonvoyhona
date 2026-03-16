@@ -160,15 +160,21 @@ def init_db():
     with app.app_context():
         # First, try to add missing columns manualy (Migration)
         from sqlalchemy import text
-        try:
-            db.session.execute(text("ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES mijozlar(id)"))
-            db.session.execute(text("ALTER TABLE kassa ADD COLUMN IF NOT EXISTS smena INTEGER DEFAULT 1"))
-            db.session.execute(text("ALTER TABLE kassa ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES foydalanuvchilar(id)"))
-            db.session.execute(text("ALTER TABLE haydovchi_tolovlari ADD COLUMN IF NOT EXISTS collector_id INTEGER REFERENCES xodimlar.id"))
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            print(f"Migration backup: {e}")
+        # Individual column migrations (IF NOT EXISTS is for Postgres)
+        migrations = [
+            "ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES mijozlar(id)",
+            "ALTER TABLE kassa ADD COLUMN IF NOT EXISTS smena INTEGER DEFAULT 1",
+            "ALTER TABLE kassa ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES foydalanuvchilar(id)",
+            "ALTER TABLE haydovchi_tolovlari ADD COLUMN IF NOT EXISTS collector_id INTEGER REFERENCES xodimlar(id)"
+        ]
+        
+        for sql in migrations:
+            try:
+                db.session.execute(text(sql))
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print(f"Migration skip: {sql.split('ADD COLUMN')[0]}... Error: {e}")
 
         db.create_all()
         
