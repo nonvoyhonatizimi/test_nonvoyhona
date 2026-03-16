@@ -412,9 +412,9 @@ def add_sale():
             from sqlalchemy import func
             total_miqdor = db.session.query(
                 func.sum(DriverInventory.miqdor)
-            ).filter_by(
-                driver_id=check_xodim_id,
-                non_turi=non_turi
+            ).filter(
+                DriverInventory.driver_id == check_xodim_id,
+                func.lower(func.trim(DriverInventory.non_turi)) == func.lower(func.trim(non_turi))
             ).scalar() or 0
             
             if total_miqdor < miqdor:
@@ -480,9 +480,9 @@ def add_sale():
         # Inventorydan non ayirish (original non_turi orqali)
         if xodim_id:
             remaining = miqdor
-            inventories = DriverInventory.query.filter_by(
-                driver_id=xodim_id,
-                non_turi=non_turi
+            inventories = DriverInventory.query.filter(
+                DriverInventory.driver_id == xodim_id,
+                func.lower(func.trim(DriverInventory.non_turi)) == func.lower(func.trim(non_turi))
             ).order_by(DriverInventory.sana.desc()).all()
             
             for inv in inventories:
