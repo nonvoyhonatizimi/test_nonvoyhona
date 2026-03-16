@@ -162,6 +162,7 @@ def init_db():
         from sqlalchemy import text
         try:
             db.session.execute(text("ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES mijozlar(id)"))
+            db.session.execute(text("ALTER TABLE kassa ADD COLUMN IF NOT EXISTS smena INTEGER DEFAULT 1"))
             db.session.commit()
         except Exception as e:
             db.session.rollback()
