@@ -154,7 +154,24 @@ def pay_selected_debts(customer_id):
             if customer.jami_qarz < 0:
                 customer.jami_qarz = Decimal('0')
         
+        # Kassaga qo'shish
+        from models import Cash, DayStatus
+        open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
+        current_smena = open_smena.smena if open_smena else 1
+        
+        last_cash = Cash.query.order_by(Cash.id.desc()).first()
+        current_balance = last_cash.balans if last_cash else Decimal('0')
+        new_cash = Cash(
+            sana=datetime.now().date(),
+            smena=current_smena,
+            kirim=total_paid,
+            balans=current_balance + total_paid,
+            izoh=f"Qarz to'lovi: {customer.nomi if customer else 'Nomalum'} (multi-sana)",
+            turi='Qarz to\'lovi'
+        )
+        db.session.add(new_cash)
         db.session.commit()
+        
         flash(f'Muvaffaqiyatli! Tanlangan ({dates_paid_count} xil) qarzlar yopildi. Jami {total_paid:,.0f} so\'m to\'landi.', 'success')
     else:
         flash('Qarzli sotuv topilmadi yoki xatolik yuz berdi.', 'warning')
@@ -480,6 +497,14 @@ def daily_sales():
             driver_sales[driver_name]['naqt_sotuvlar'].append(sale)
             driver_sales[driver_name]['jami_naqt'] += sale.tolandi
     
+    # Qarz to'lovlarini olish (Kassadan)
+    from models import Cash
+    qarz_tolovlari = Cash.query.filter_by(
+        smena=current_smena,
+        turi='Qarz to\'lovi'
+    ).all()
+    jami_qarz_tolovlari = sum([float(c.kirim) for c in qarz_tolovlari])
+    
     # O'tkazishlarni olish (sana filtrisiz)
     tandirchi_transfers = BreadTransfer.query.filter(
         BreadTransfer.from_turi == 'tandirchi',
@@ -543,7 +568,9 @@ def daily_sales():
                          jami_naqt=jami_naqt,
                          non_turlari=non_turlari,
                          driver_inventory=driver_inventory,
-                         day_status=day_status)
+                         day_status=day_status,
+                         qarz_tolovlari=qarz_tolovlari,
+                         jami_qarz_tolovlari=jami_qarz_tolovlari)
 
 @reports_bp.route('/close-day', methods=['POST'])
 @login_required

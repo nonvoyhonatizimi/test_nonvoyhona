@@ -265,18 +265,24 @@ def bulk_pay_debt():
         if customer:
             customer.jami_qarz -= payment
             
-        # Agar bugun sotuv qilingan bo'lsa, kassaga qo'shish
-        if sale.sana == today:
-            last_cash = Cash.query.order_by(Cash.id.desc()).first()
-            current_balance = last_cash.balans if last_cash else Decimal('0')
-            new_cash = Cash(
-                sana=today,
-                kirim=payment,
-                balans=current_balance + payment,
-                izoh=f"Qarz to'lovi: {customer.nomi if customer else 'Nomalum'} (bugun)",
-                turi='Qarz to\'lovi'
-            )
-            db.session.add(new_cash)
+        # Kassaga qo'shish (Xar doim qarz to'langanda)
+        last_cash = Cash.query.order_by(Cash.id.desc()).first()
+        current_balance = last_cash.balans if last_cash else Decimal('0')
+        
+        # Agar oldingi smenadagi qarz bo'lsa 'Qarz to'lovi', hozirgi smenada bo'lsa 'Sotuv' turi bilan yoziladi
+        is_old_debt = (sale.smena < current_smena)
+        cash_turi = 'Qarz to\'lovi' if is_old_debt else 'Sotuv'
+        cash_izoh = f"Qarz to'lovi: {customer.nomi if customer else 'Nomalum'} ({'eski qarz' if is_old_debt else 'bugungi'})"
+        
+        new_cash = Cash(
+            sana=today,
+            smena=current_smena,
+            kirim=payment,
+            balans=current_balance + payment,
+            izoh=cash_izoh,
+            turi=cash_turi
+        )
+        db.session.add(new_cash)
             
         # Driver payment
         driver_payment = DriverPayment.query.filter_by(sale_id=sale.id).first()
@@ -322,20 +328,24 @@ def pay_debt(sale_id):
         # Sana tekshirish - bugunmi yoki oldingi kunmi
         from datetime import date
         today = date.today()
-        is_today = (sale.sana == today)
+        # Kassaga qo'shish (Xar doim qarz to'langanda)
+        last_cash = Cash.query.order_by(Cash.id.desc()).first()
+        current_balance = last_cash.balans if last_cash else Decimal('0')
         
-        # Agar bugun sotuv qilingan bo'lsa, kassaga qo'shish
-        if is_today:
-            last_cash = Cash.query.order_by(Cash.id.desc()).first()
-            current_balance = last_cash.balans if last_cash else Decimal('0')
-            new_cash = Cash(
-                sana=datetime.now().date(),
-                kirim=payment,
-                balans=current_balance + payment,
-                izoh=f"Qarz to'lovi: {customer.nomi if customer else 'Nomalum'} (bugun)",
-                turi='Qarz to\'lovi'
-            )
-            db.session.add(new_cash)
+        # Agar oldingi smenadagi qarz bo'lsa 'Qarz to'lovi', hozirgi smenada bo'lsa 'Sotuv' turi bilan yoziladi
+        is_old_debt = (sale.smena < current_smena)
+        cash_turi = 'Qarz to\'lovi' if is_old_debt else 'Sotuv'
+        cash_izoh = f"Qarz to'lovi: {customer.nomi if customer else 'Nomalum'} ({'eski qarz' if is_old_debt else 'bugungi'})"
+        
+        new_cash = Cash(
+            sana=datetime.now().date(),
+            smena=current_smena,
+            kirim=payment,
+            balans=current_balance + payment,
+            izoh=cash_izoh,
+            turi=cash_turi
+        )
+        db.session.add(new_cash)
         
         # Haydovchi to'lovini saqlash
         driver_payment = DriverPayment.query.filter_by(sale_id=sale.id).first()
@@ -456,6 +466,7 @@ def add_sale():
                 current_balance = last_cash.balans if last_cash else 0
                 new_cash = Cash(
                     sana=datetime.now().date(),
+                    smena=current_smena,
                     kirim=tolandi,
                     balans=current_balance + tolandi,
                     izoh=f"Sotuv: {customer.nomi if customer else 'Noma`lum'}",

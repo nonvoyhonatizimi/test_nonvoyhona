@@ -60,31 +60,71 @@
 
 <!-- Jami hisobot -->
 <div class="row mb-4">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card bg-warning text-dark">
             <div class="card-body text-center">
-                <h5>Qarzga</h5>
+                <h5>Qarzga (Bugun)</h5>
                 <h3>{{ "{:,.0f}".format(jami_qarz) }} so'm</h3>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card bg-success text-white">
             <div class="card-body text-center">
-                <h5>Naqt</h5>
+                <h5>Naqt (Bugun)</h5>
                 <h3>{{ "{:,.0f}".format(jami_naqt) }} so'm</h3>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card bg-info text-white">
             <div class="card-body text-center">
-                <h5>Jami</h5>
-                <h3>{{ "{:,.0f}".format(jami_qarz + jami_naqt) }} so'm</h3>
+                <h5>Eski Qarzlar</h5>
+                <h3>{{ "{:,.0f}".format(jami_qarz_tolovlari) }} so'm</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark text-white">
+            <div class="card-body text-center">
+                <h5>Jami Kirim</h5>
+                <h3>{{ "{:,.0f}".format(jami_naqt + jami_qarz_tolovlari) }} so'm</h3>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Qarz to'lovlari (Oldingi smenalar uchun) -->
+{% if qarz_tolovlari %}
+<div class="card mb-4 border-info">
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Qarz to'lovlari (Eski qarzlar yopilishi)</h5>
+        <span class="badge bg-white text-info fw-bold">{{ "{:,.0f}".format(jami_qarz_tolovlari) }} so'm</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Vaqt</th>
+                        <th>Izoh</th>
+                        <th class="text-end">Summa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for q in qarz_tolovlari %}
+                    <tr>
+                        <td>{{ q.created_at.strftime('%H:%M') if q.created_at else '-' }}</td>
+                        <td>{{ q.izoh }}</td>
+                        <td class="text-end fw-bold text-success">{{ "{:,.0f}".format(q.kirim) }} so'm</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Non turlari bo'yicha -->
 <div class="card mb-4">

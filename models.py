@@ -145,6 +145,7 @@ class Cash(db.Model):
     balans = db.Column(db.Numeric(10, 2), default=0)
     izoh = db.Column(db.String(200))
     turi = db.Column(db.String(50))  # Sotuv, Xarajat, Ish haqqi
+    smena = db.Column(db.Integer, default=1)  # Smena raqami
 
 class Log(db.Model):
     __tablename__ = 'jurnal'
