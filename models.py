@@ -32,11 +32,11 @@ class Employee(db.Model):
     ism = db.Column(db.String(100), nullable=False)
     lavozim = db.Column(db.String(50))
     telefon = db.Column(db.String(20))
-    oylik = db.Column(db.Numeric(10, 2), default=0)
+    oylik = db.Column(db.Numeric(18, 2), default=0)
     status = db.Column(db.String(20), default='faol')
     ish_boshlanish = db.Column(db.Date, default=datetime.utcnow)
     # Kunlik ish haqqi stavkasi (bir dona/qop uchun)
-    ish_haqqi_stavka = db.Column(db.Numeric(10, 2), default=0)
+    ish_haqqi_stavka = db.Column(db.Numeric(18, 2), default=0)
 
 class Customer(db.Model):
     __tablename__ = 'mijozlar'
@@ -46,15 +46,15 @@ class Customer(db.Model):
     telefon = db.Column(db.String(20))
     manzil = db.Column(db.String(200))
     telegram_chat_id = db.Column(db.String(50))  # Telegram guruh ID si
-    kredit_limit = db.Column(db.Numeric(10, 2), default=0)
-    jami_qarz = db.Column(db.Numeric(10, 2), default=0)
+    kredit_limit = db.Column(db.Numeric(18, 2), default=0)
+    jami_qarz = db.Column(db.Numeric(18, 2), default=0)
     status = db.Column(db.String(20), default='faol')
 
 class BreadType(db.Model):
     __tablename__ = 'non_turlari'
     id = db.Column(db.Integer, primary_key=True)
     nomi = db.Column(db.String(100), nullable=False, unique=True)
-    narx = db.Column(db.Numeric(12, 2), default=0)  # Bitta non narxi
+    narx = db.Column(db.Numeric(18, 2), default=0)  # Bitta non narxi
     created_at = db.Column(db.DateTime, default=uz_datetime)
 
 class Dough(db.Model):
@@ -114,10 +114,10 @@ class Sale(db.Model):
     mijoz_id = db.Column(db.Integer, db.ForeignKey('mijozlar.id'))
     non_turi = db.Column(db.String(50))
     miqdor = db.Column(db.Integer)
-    narx_dona = db.Column(db.Numeric(10, 2))
-    jami_summa = db.Column(db.Numeric(10, 2))
-    tolandi = db.Column(db.Numeric(10, 2), default=0)
-    qoldiq_qarz = db.Column(db.Numeric(10, 2), default=0)
+    narx_dona = db.Column(db.Numeric(18, 2))
+    jami_summa = db.Column(db.Numeric(18, 2))
+    tolandi = db.Column(db.Numeric(18, 2), default=0)
+    qoldiq_qarz = db.Column(db.Numeric(18, 2), default=0)
     xodim_id = db.Column(db.Integer, db.ForeignKey('xodimlar.id'))
     xodim = db.Column(db.String(100))
     
@@ -129,7 +129,7 @@ class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sana = db.Column(db.Date, nullable=False)
     turi = db.Column(db.String(50))
-    summa = db.Column(db.Numeric(10, 2))
+    summa = db.Column(db.Numeric(18, 2))
     izoh = db.Column(db.String(200))
     xodim_id = db.Column(db.Integer, db.ForeignKey('xodimlar.id'))
     
@@ -140,9 +140,9 @@ class Cash(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sana = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Vaqt bilan
-    kirim = db.Column(db.Numeric(10, 2), default=0)
-    chiqim = db.Column(db.Numeric(10, 2), default=0)
-    balans = db.Column(db.Numeric(10, 2), default=0)
+    kirim = db.Column(db.Numeric(18, 2), default=0)
+    chiqim = db.Column(db.Numeric(18, 2), default=0)
+    balans = db.Column(db.Numeric(18, 2), default=0)
     izoh = db.Column(db.String(200))
     turi = db.Column(db.String(50))  # Sotuv, Xarajat, Ish haqqi
     smena = db.Column(db.Integer, default=1)  # Smena raqami
@@ -217,7 +217,7 @@ class DriverPayment(db.Model):
     sale_id = db.Column(db.Integer, db.ForeignKey('sotuvlar.id', ondelete='CASCADE'), nullable=False)
     driver_id = db.Column(db.Integer, db.ForeignKey('xodimlar.id'), nullable=False)
     mijoz_id = db.Column(db.Integer, db.ForeignKey('mijozlar.id'), nullable=False)
-    summa = db.Column(db.Numeric(10, 2), nullable=False)
+    summa = db.Column(db.Numeric(18, 2), nullable=False)
     smena = db.Column(db.Integer, default=1)  # Smena raqami
     status = db.Column(db.String(20), default='kutilmoqda')  # kutilmoqda, tolandi
     created_at = db.Column(db.DateTime, default=uz_datetime)
@@ -271,7 +271,7 @@ class SalaryPayment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     xodim_id = db.Column(db.Integer, db.ForeignKey('xodimlar.id', ondelete='CASCADE'), nullable=False)
     sana = db.Column(db.Date, nullable=False)  # Qaysi kun uchun ish haqqi tolandi
-    summa = db.Column(db.Numeric(10, 2), nullable=False)
+    summa = db.Column(db.Numeric(18, 2), nullable=False)
     izoh = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=uz_datetime)
     
