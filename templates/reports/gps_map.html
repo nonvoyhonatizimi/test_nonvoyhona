@@ -22,9 +22,19 @@
     <div class="col-12">
         <div class="card mb-4 border-0 shadow-sm">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="card-title mb-0"><i class="fas fa-satellite text-success me-2"></i> Jonli Xarita</h5>
-                    <span class="badge bg-primary" id="status-badge">Yangilanmoqda...</span>
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div>
+                        <h5 class="card-title mb-0"><i class="fas fa-satellite text-success me-2"></i> Jonli Xarita</h5>
+                        <span class="badge bg-primary" id="status-badge">Yangilanmoqda...</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <select id="driver-select" class="form-select form-select-sm" style="max-width: 200px;">
+                            <option value="">-- Haydovchini topish --</option>
+                        </select>
+                        <button id="find-me-btn" class="btn btn-sm btn-outline-primary shadow-sm" style="white-space: nowrap;">
+                            <i class="fas fa-crosshairs"></i> Mening joylashuvim
+                        </button>
+                    </div>
                 </div>
                 <div id="map"></div>
                 
@@ -48,6 +58,57 @@
     }).addTo(map);
 
     var markers = {};
+    var driverData = {}; // Koordinatalarni ushlab turish uchun
+
+    // Haydovchini tanlaganda xaritani usha joyga olib borish
+    document.getElementById('driver-select').addEventListener('change', function(e) {
+        var did = e.target.value;
+        if(did && driverData[did]) {
+            map.setView([driverData[did].lat, driverData[did].lng], 16);
+            markers[did].openPopup();
+        }
+    });
+
+    // Admin o'z joylashuvini ko'rishi
+    document.getElementById('find-me-btn').addEventListener('click', function() {
+        if(navigator.geolocation) {
+            let btn = this;
+            let originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Izlanmoqda...';
+            btn.disabled = true;
+            
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                if(window.adminMarker) {
+                    map.removeLayer(window.adminMarker);
+                }
+                
+                window.adminMarker = L.marker([lat, lng], {
+                    icon: L.icon({
+                        iconUrl: 'https://cdn-icons-png.flaticon.com/512/2922/2922510.png',
+                        iconSize: [45, 45],
+                        iconAnchor: [22, 45],
+                        popupAnchor: [0, -45]
+                    })
+                }).addTo(map).bindPopup('<b class="text-primary"><i class="fas fa-user-shield"></i> Siz ayni vaqtda shu yerdasiz!</b>').openPopup();
+                
+                map.setView([lat, lng], 16);
+                
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }, function(error) {
+                alert("Joylashuvingizni aniqlab bo'lmadi! Brauzerdan GPS ga ruxsat berilganini tekshiring.");
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }, {
+                enableHighAccuracy: true
+            });
+        } else {
+            alert("Brauzeringiz GPS ni qo'llab-quvvatlamaydi.");
+        }
+    });
 
     function updateMap() {
         fetch("{{ url_for('reports.get_gps_data') }}")
@@ -55,9 +116,21 @@
             .then(data => {
                 if(data.drivers) {
                     let count = 0;
+                    let selectObj = document.getElementById('driver-select');
+                    let existingIds = Array.from(selectObj.options).map(opt => opt.value);
+
                     data.drivers.forEach(driver => {
                         count++;
                         let latlng = [driver.lat, driver.lng];
+                        driverData[driver.id] = {lat: driver.lat, lng: driver.lng, name: driver.name};
+                        
+                        // Agar selectda yoq bo'lsa qo'shib qo'yish
+                        if(!existingIds.includes(driver.id.toString())) {
+                            let opt = document.createElement('option');
+                            opt.value = driver.id;
+                            opt.innerHTML = "🚚 " + driver.name;
+                            selectObj.appendChild(opt);
+                        }
                         
                         if(markers[driver.id]) {
                             // Agar marker bor bo'lsa manzilini yangilash
