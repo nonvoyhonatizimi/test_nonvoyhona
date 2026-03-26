@@ -289,3 +289,13 @@ class EmployeeNote(db.Model):
     created_at = db.Column(db.DateTime, default=uz_datetime)
     
     employee = db.relationship('Employee', backref='notes')
+
+class DriverLocationHistory(db.Model):
+    __tablename__ = 'haydovchi_lokatsiya_tarixi'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('foydalanuvchilar.id', ondelete='CASCADE'), nullable=False)
+    latitude = db.Column(db.String(50), nullable=False)
+    longitude = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.DateTime, default=uz_datetime)
+    
+    user = db.relationship('User', backref=db.backref('location_history', cascade='all, delete-orphan'))

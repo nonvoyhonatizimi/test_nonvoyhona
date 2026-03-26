@@ -168,8 +168,16 @@ def update_location():
     if lat and lng:
         current_user.latitude = str(lat)
         current_user.longitude = str(lng)
-        from models import uz_datetime
+        from models import uz_datetime, DriverLocationHistory
         current_user.last_location_time = uz_datetime()
+        
+        history = DriverLocationHistory(
+            user_id=current_user.id,
+            latitude=str(lat),
+            longitude=str(lng),
+            timestamp=uz_datetime()
+        )
+        db.session.add(history)
         db.session.commit()
         
     return {"status": "success"}

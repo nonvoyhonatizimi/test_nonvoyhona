@@ -698,3 +698,22 @@ def get_gps_data():
         })
         
     return {"drivers": data}
+
+@reports_bp.route('/api/gps-history/<int:driver_id>')
+@login_required
+def get_gps_history(driver_id):
+    if current_user.rol != 'admin':
+        return {"error": "Unauthorized"}, 403
+        
+    from models import DriverLocationHistory, uz_datetime
+    from datetime import datetime
+    
+    today_start = datetime.combine(uz_datetime().date(), datetime.min.time())
+    
+    points_records = DriverLocationHistory.query.filter(
+        DriverLocationHistory.user_id == driver_id,
+        DriverLocationHistory.timestamp >= today_start
+    ).order_by(DriverLocationHistory.timestamp.asc()).all()
+    
+    points = [{"lat": float(p.latitude), "lng": float(p.longitude), "time": p.timestamp.strftime('%H:%M:%S')} for p in points_records]
+    return {"points": points}
