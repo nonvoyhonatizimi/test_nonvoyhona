@@ -259,8 +259,11 @@
 
         // Initialize state
         document.addEventListener('DOMContentLoaded', function() {
-{% if current_user.is_authenticated and current_user.employee and 'haydovchi' in (current_user.employee.lavozim|lower if current_user.employee.lavozim else '') %}
-            // FAqat Haydovchilar uchun GPS Kuzatuv KODI
+{% if current_user.is_authenticated and current_user.employee %}
+  {% set qaysi_lavozim = (current_user.employee.lavozim|lower) if current_user.employee.lavozim else '' %}
+  {% if 'haydovchi' in qaysi_lavozim %}
+            // FAQAT Haydovchilar uchun GPS Kuzatuv KODI
+            console.log("GPS script initialized for driver.");
             if (navigator.geolocation) {
                 navigator.geolocation.watchPosition(function(position) {
                     let lat = position.coords.latitude;
@@ -277,13 +280,17 @@
                         })
                     }).catch(err => console.error("GPS jo'natish xatosi:", err));
                 }, function(error) {
-                    console.log("GPS Ruxsati olinmadi", error);
+                    console.error("GPS Ruxsati olinmadi:", error);
+                    if(error.code === 1) alert("Tizim sizni kuzatishi uchun 'Lokatsiyaga ruxsat berish' ("+ error.message +") tugmasini bosishingiz shart.");
                 }, {
                     enableHighAccuracy: true,
                     maximumAge: 0,
                     timeout: 5000
                 });
+            } else {
+                alert("Brauzeringiz GPS manzilini yuborishni qo'llab quvvatlamaydi yoxud xavfsiz (HTTPS) emas.");
             }
+  {% endif %}
 {% endif %}
             const savedState = localStorage.getItem('sidebar_hidden');
             if (savedState === 'false') {
