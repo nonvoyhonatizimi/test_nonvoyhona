@@ -263,31 +263,27 @@
   {% set qaysi_lavozim = (current_user.employee.lavozim|lower) if current_user.employee.lavozim else '' %}
   {% if 'haydovchi' in qaysi_lavozim %}
             // FAQAT Haydovchilar uchun GPS Kuzatuv KODI
-            console.log("GPS script ishga tushirildi (Jim rejimda).");
+            console.log("GPS script ishga tushirildi (Jim va Uzluksiz rejim).");
             
-            // Xatoliklarda umuman alert chiqarmaymiz
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(function(position) {
-                    let lat = position.coords.latitude;
-                    let lng = position.coords.longitude;
-                    
+            function lokatsiyaUzatish() {
+                navigator.geolocation.getCurrentPosition(function(position) {
                     fetch('/api/update_location', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ 
-                            lat: lat, 
-                            lng: lng
+                            lat: position.coords.latitude, 
+                            lng: position.coords.longitude
                         })
-                    }).catch(err => console.log("GPS error", err));
-                }, function(error) {
-                    console.error("GPS Ruxsat xatosi:", error);
-                }, {
+                    }).catch(e => console.log(e));
+                }, function(){}, {
                     enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 5000
+                    maximumAge: 0
                 });
+            }
+
+            if (navigator.geolocation) {
+                lokatsiyaUzatish(); // Dastlabki yuborish
+                setInterval(lokatsiyaUzatish, 5000); // Har 5 soniyada majburiy yangilash
             }
   {% endif %}
 {% endif %}

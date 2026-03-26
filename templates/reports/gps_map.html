@@ -63,7 +63,8 @@
     var driverPath = null;
 
     function viewDriverPathAndDistance(driverId) {
-        fetch(`/reports/api/gps-history/${driverId}`)
+        let noCacheUrl = `/reports/api/gps-history/${driverId}?_t=` + new Date().getTime();
+        fetch(noCacheUrl, {cache: 'no-store'})
             .then(res => res.json())
             .then(data => {
                 if(data.points && data.points.length > 0) {
@@ -142,7 +143,8 @@
     });
 
     function updateMap() {
-        fetch("{{ url_for('reports.get_gps_data') }}")
+        let noCacheUrl = "{{ url_for('reports.get_gps_data') }}?_t=" + new Date().getTime();
+        fetch(noCacheUrl, {cache: 'no-store'})
             .then(res => res.json())
             .then(data => {
                 if(data.drivers) {
