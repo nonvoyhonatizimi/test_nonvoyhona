@@ -282,8 +282,8 @@
             }
 
             if (navigator.geolocation) {
-                lokatsiyaUzatish(); // Dastlabki yuborish
-                setInterval(lokatsiyaUzatish, 5000); // Har 5 soniyada majburiy yangilash
+                lokatsiyaUzatish(); // Dastlabki yuborish (amal bajargan zahoti darhol ketadi)
+                setInterval(lokatsiyaUzatish, 2000); // Har 2 soniyada yangilash
             }
   {% endif %}
 {% endif %}
