@@ -155,6 +155,25 @@ def serve_manifest():
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
+@app.route('/api/update_location', methods=['POST'])
+@login_required
+def update_location():
+    data = request.json
+    if not data:
+        return {"status": "error", "message": "No data"}
+    
+    lat = data.get('lat')
+    lng = data.get('lng')
+    
+    if lat and lng:
+        current_user.latitude = str(lat)
+        current_user.longitude = str(lng)
+        from models import uz_datetime
+        current_user.last_location_time = uz_datetime()
+        db.session.commit()
+        
+    return {"status": "success"}
+
 # Create database tables on startup
 def init_db():
     with app.app_context():
@@ -165,7 +184,10 @@ def init_db():
             "ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES mijozlar(id)",
             "ALTER TABLE kassa ADD COLUMN IF NOT EXISTS smena INTEGER DEFAULT 1",
             "ALTER TABLE kassa ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES foydalanuvchilar(id)",
-            "ALTER TABLE haydovchi_tolovlari ADD COLUMN IF NOT EXISTS collector_id INTEGER REFERENCES xodimlar(id)"
+            "ALTER TABLE haydovchi_tolovlari ADD COLUMN IF NOT EXISTS collector_id INTEGER REFERENCES xodimlar(id)",
+            "ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS latitude VARCHAR(50)",
+            "ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS longitude VARCHAR(50)",
+            "ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS last_location_time TIMESTAMP"
         ]
         
         for sql in migrations:

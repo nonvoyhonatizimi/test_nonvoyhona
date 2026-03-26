@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Jonli GPS Xarita - Nonvoyhona{% endblock %}
+{% block header_title %}Avtomobillarni Kuzatish{% endblock %}
+
+{% block extra_head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+    #map {
+        height: 70vh;
+        width: 100%;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0"><i class="fas fa-satellite text-success me-2"></i> Jonli Xarita</h5>
+                    <span class="badge bg-primary" id="status-badge">Yangilanmoqda...</span>
+                </div>
+                <div id="map"></div>
+                
+                <div class="mt-3 small text-muted">
+                    <i class="fas fa-info-circle"></i> Haydovchilar telefonni o'chirib qo'ysa yoki interneti uzilsa, marker ularning ohirgi qolgan joyida turib qoladi. Manzil yangilanishi uchun ular dasturga kirib turishlari kerak.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toshkent shahri markazi (default markaz)
+    var map = L.map('map').setView([41.2995, 69.2401], 12);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    var markers = {};
+
+    function updateMap() {
+        fetch("{{ url_for('reports.get_gps_data') }}")
+            .then(res => res.json())
+            .then(data => {
+                if(data.drivers) {
+                    let count = 0;
+                    data.drivers.forEach(driver => {
+                        count++;
+                        let latlng = [driver.lat, driver.lng];
+                        
+                        if(markers[driver.id]) {
+                            // Agar marker bor bo'lsa manzilini yangilash
+                            markers[driver.id].setLatLng(latlng);
+                            markers[driver.id].setPopupContent(`<b>🚘 ${driver.name}</b><br>Manzil olingan vaqt: ${driver.last_time}`);
+                        } else {
+                            // Yangi mashina ICON'i
+                            let carIcon = L.icon({
+                                iconUrl: 'https://cdn-icons-png.flaticon.com/512/3201/3201991.png',
+                                iconSize: [40, 40],
+                                iconAnchor: [20, 20],
+                                popupAnchor: [0, -20]
+                            });
+                            
+                            markers[driver.id] = L.marker(latlng, {icon: carIcon}).addTo(map)
+                                .bindPopup(`<b>🚘 ${driver.name}</b><br>Manzil olingan vaqt: ${driver.last_time}`);
+                        }
+                    });
+                    
+                    document.getElementById('status-badge').innerText = `Onlayn haydovchilar: ${count}`;
+                    document.getElementById('status-badge').className = "badge bg-success";
+                }
+            })
+            .catch(err => {
+                console.error("Xatolik", err);
+                document.getElementById('status-badge').innerText = `Tarmoq ulanmadi`;
+                document.getElementById('status-badge').className = "badge bg-danger";
+            });
+    }
+
+    // Har 5 soniyada xaritani yangilab turish
+    setInterval(updateMap, 5000);
+    // Sahifa ochilishi bilan 1 marta darhol chaqirish
+    updateMap();
+</script>
+{% endblock %}

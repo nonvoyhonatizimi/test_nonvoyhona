@@ -113,6 +113,15 @@
                     </li>
                     {% endif %}
 
+                    {# GPS Xarita #}
+                    {% if current_user.rol == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'reports.gps_map' in request.endpoint %}active{% endif %}" href="{{ url_for('reports.gps_map') }}">
+                            <i class="fas fa-map-marker-alt text-success"></i> Jonli GPS Xarita
+                        </a>
+                    </li>
+                    {% endif %}
+
                     {# 9. Xodimlar #}
                     {% if current_user.rol == 'admin' %}
                     <li class="nav-item">
@@ -250,6 +259,32 @@
 
         // Initialize state
         document.addEventListener('DOMContentLoaded', function() {
+{% if current_user.is_authenticated and current_user.employee and 'haydovchi' in (current_user.employee.lavozim|lower if current_user.employee.lavozim else '') %}
+            // FAqat Haydovchilar uchun GPS Kuzatuv KODI
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(function(position) {
+                    let lat = position.coords.latitude;
+                    let lng = position.coords.longitude;
+                    
+                    fetch('/api/update_location', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            lat: lat, 
+                            lng: lng
+                        })
+                    }).catch(err => console.error("GPS jo'natish xatosi:", err));
+                }, function(error) {
+                    console.log("GPS Ruxsati olinmadi", error);
+                }, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 5000
+                });
+            }
+{% endif %}
             const savedState = localStorage.getItem('sidebar_hidden');
             if (savedState === 'false') {
                 document.body.classList.remove('sidebar-hidden');

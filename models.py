@@ -22,6 +22,9 @@ class User(UserMixin, db.Model):
     customer_id = db.Column(db.Integer, db.ForeignKey('mijozlar.id'), nullable=True)
     status = db.Column(db.String(20), default='active')
     created_at = db.Column(db.DateTime, default=uz_datetime)
+    latitude = db.Column(db.String(50), nullable=True)
+    longitude = db.Column(db.String(50), nullable=True)
+    last_location_time = db.Column(db.DateTime, nullable=True)
     
     employee = db.relationship('Employee', backref=db.backref('user', uselist=False))
     customer = db.relationship('Customer', backref=db.backref('user', uselist=False))

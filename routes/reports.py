@@ -653,3 +653,48 @@ def close_day():
     
     flash(f'Smena {current_smena - 1} yopildi! Yangi smena: {current_smena}', 'success')
     return redirect(url_for('reports.daily_sales'))
+
+@reports_bp.route('/gps-map')
+@login_required
+def gps_map():
+    """Jonli GPS xarita sahifasi (faqat admin)"""
+    if current_user.rol != 'admin':
+        flash('Bu funksiya faqat admin uchun!', 'error')
+        return redirect(url_for('index'))
+    return render_template('reports/gps_map.html')
+
+@reports_bp.route('/api/gps-data')
+@login_required
+def get_gps_data():
+    """Haydovchilarning oxirgi lokatsiyalarini qaytaradi"""
+    if current_user.rol != 'admin':
+        return {"error": "Unauthorized"}, 403
+        
+    from models import User, Employee
+    
+    drivers = User.query.filter(
+        User.latitude.isnot(None),
+        User.longitude.isnot(None)
+    ).all()
+    
+    data = []
+    for d in drivers:
+        name = d.ism
+        if d.employee:
+            name = d.employee.ism
+            if not ('haydovchi' in str(d.employee.lavozim).lower()):
+                continue # Agar haydovchi bo'lmasa qochamiz (faqat haydovchilar chiqadi)
+        else:
+            continue
+            
+        time_str = d.last_location_time.strftime('%H:%M:%S') if d.last_location_time else "Noma'lum"
+        
+        data.append({
+            "id": d.id,
+            "name": name,
+            "lat": float(d.latitude),
+            "lng": float(d.longitude),
+            "last_time": time_str
+        })
+        
+    return {"drivers": data}
