@@ -247,6 +247,37 @@ def init_db():
 # Initialize database on startup
 init_db()
 
+import threading
+import time
+from datetime import datetime
+
+def daily_report_job():
+    """Background thread to send daily sales reports at 23:59"""
+    print("[INFO] Daily report background job started.")
+    from models import uz_datetime
+    from routes.sales import send_daily_sales_reports
+    
+    while True:
+        now = uz_datetime()
+        # Kechqurun soat 23:59 da ishlashi uchun
+        if now.hour == 23 and now.minute == 59:
+            print("[INFO] Vaqt keldi, kunlik hisobotlar telegramga yuborilmoqda...")
+            with app.app_context():
+                try:
+                    send_daily_sales_reports()
+                except Exception as e:
+                    print(f"[XATO] Daily report error: {e}")
+            # Bir marta qayta ishlamasligi uchun 62 soniya kutish
+            time.sleep(62)
+        else:
+            # Har 30 soniyada vaqtni tekshiramiz
+            time.sleep(30)
+
+# Orqafonda ishga tushirish (agar muhit bunga ruxsat bersa)
+if not os.environ.get("WERKZEUG_RUN_MAIN"): # reload qilinganda 2 marta ishlamasligi uchun
+    report_thread = threading.Thread(target=daily_report_job, daemon=True)
+    report_thread.start()
+
 # Production ready - v1.0
 if __name__ == '__main__':
     with app.app_context():

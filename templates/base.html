@@ -113,14 +113,7 @@
                     </li>
                     {% endif %}
 
-                    {# GPS Xarita #}
-                    {% if current_user.rol == 'admin' %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'reports.gps_map' in request.endpoint %}active{% endif %}" href="{{ url_for('reports.gps_map') }}">
-                            <i class="fas fa-map-marker-alt text-success"></i> Jonli GPS Xarita
-                        </a>
-                    </li>
-                    {% endif %}
+
 
                     {# 9. Xodimlar #}
                     {% if current_user.rol == 'admin' %}
@@ -259,34 +252,7 @@
 
         // Initialize state
         document.addEventListener('DOMContentLoaded', function() {
-{% if current_user.is_authenticated and current_user.employee %}
-  {% set qaysi_lavozim = (current_user.employee.lavozim|lower) if current_user.employee.lavozim else '' %}
-  {% if 'haydovchi' in qaysi_lavozim %}
-            // FAQAT Haydovchilar uchun GPS Kuzatuv KODI
-            console.log("GPS script ishga tushirildi (Jim va Uzluksiz rejim).");
-            
-            function lokatsiyaUzatish() {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    fetch('/api/update_location', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ 
-                            lat: position.coords.latitude, 
-                            lng: position.coords.longitude
-                        })
-                    }).catch(e => console.log(e));
-                }, function(){}, {
-                    enableHighAccuracy: true,
-                    maximumAge: 0
-                });
-            }
 
-            if (navigator.geolocation) {
-                lokatsiyaUzatish(); // Dastlabki yuborish (amal bajargan zahoti darhol ketadi)
-                setInterval(lokatsiyaUzatish, 2000); // Har 2 soniyada yangilash
-            }
-  {% endif %}
-{% endif %}
             const savedState = localStorage.getItem('sidebar_hidden');
             if (savedState === 'false') {
                 document.body.classList.remove('sidebar-hidden');

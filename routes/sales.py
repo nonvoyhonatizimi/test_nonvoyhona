@@ -116,6 +116,90 @@ Xodim: {sale_data['xodim']}
         print(f"[XATO] Telegram exception: {e}")
         return False
 
+def send_daily_sales_reports():
+    """Send daily sales summary to all customers at 23:59"""
+    from models import db, Sale, Customer, uz_datetime
+    from sqlalchemy import func
+    
+    today = uz_datetime().date()
+    
+    # Bugun xarid qilgan barcha mijozlarni olish
+    sales_today = db.session.query(
+        Sale.mijoz_id,
+        Customer.nomi,
+        Customer.telegram_chat_id,
+        Customer.jami_qarz
+    ).join(Customer).filter(Sale.sana == today).group_by(
+        Sale.mijoz_id, Customer.nomi, Customer.telegram_chat_id, Customer.jami_qarz
+    ).all()
+    
+    for mijoz_id, mijoz_nomi, custom_chat_id, jami_qarz in sales_today:
+        chat_id = None
+        if custom_chat_id:
+            chat_id = custom_chat_id
+        else:
+            customer_lower = mijoz_nomi.lower().strip()
+            for key, value in CUSTOMER_GROUPS.items():
+                if key.lower() in customer_lower or customer_lower in key.lower():
+                    chat_id = value
+                    break
+        
+        if not chat_id:
+            continue
+            
+        # Mijozning bugungi savdosi detallari
+        customer_sales = db.session.query(
+            Sale.non_turi,
+            func.sum(Sale.miqdor).label('total_miqdor'),
+            func.sum(Sale.jami_summa).label('total_summa'),
+            func.sum(Sale.tolandi).label('total_tolandi'),
+            func.sum(Sale.qoldiq_qarz).label('total_qarz')
+        ).filter(
+            Sale.sana == today,
+            Sale.mijoz_id == mijoz_id
+        ).group_by(Sale.non_turi).all()
+        
+        msg_lines = [
+            "📋 <b>1 kunlik sotuvlar</b>",
+            f"📅 Sana: {today.strftime('%d.%m.%Y')}",
+            f"👤 Mijoz: <b>{mijoz_nomi}</b>",
+            "",
+            "🥖 <b>Olingan nonlar:</b>"
+        ]
+        
+        total_summa_kuni = 0
+        total_tolandi_kuni = 0
+        total_qarz_kuni = 0
+        
+        for sale in customer_sales:
+            msg_lines.append(f" - {sale.non_turi}: {sale.total_miqdor} ta")
+            total_summa_kuni += sale.total_summa
+            total_tolandi_kuni += sale.total_tolandi
+            total_qarz_kuni += sale.total_qarz
+            
+        msg_lines.extend([
+            "",
+            f"💰 Kunlik summa: <b>{total_summa_kuni:,.0f} so'm</b>",
+            f"💵 To'landi: <b>{total_tolandi_kuni:,.0f} so'm</b>",
+            f"📝 Kunlik qarz: <b>{total_qarz_kuni:,.0f} so'm</b>",
+            "",
+            f"⚠️ <b>Umumiy qarz: {jami_qarz:,.0f} so'm</b>"
+        ])
+        
+        message = "\n".join(msg_lines)
+        
+        # Telegramga jo'natish
+        try:
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            payload = {
+                "chat_id": chat_id,
+                "text": message,
+                "parse_mode": "HTML"
+            }
+            requests.post(url, json=payload, timeout=5)
+        except Exception as e:
+            print(f"[XATO] Telegram exception (daily report) {mijoz_nomi}: {e}")
+
 @sales_bp.route('/api/search_customers')
 @login_required
 def search_customers():
