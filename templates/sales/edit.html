@@ -49,6 +49,11 @@
                         <input type="number" class="form-control" id="narx" name="narx" value="{{ sale.narx_dona }}" required min="0">
                     </div>
                     {% if current_user.rol == 'admin' %}
+                    <div class="mb-3">
+                        <label for="sana" class="form-label">Sana</label>
+                        <input type="date" class="form-control" id="sana" name="sana" value="{{ sale.sana.strftime('%Y-%m-%d') if sale.sana else '' }}" required>
+                        <div class="form-text text-muted">Faqat admin uchun: sotuv sanasini o'zgartirish</div>
+                    </div>
                     <div class="mb-4">
                         <label for="soat" class="form-label">Soat (HH:MM)</label>
                         <input type="time" class="form-control" id="soat" name="soat" value="{{ sale.created_at.strftime('%H:%M') if sale.created_at else '' }}">

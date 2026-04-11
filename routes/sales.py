@@ -693,8 +693,13 @@ def edit_sale(id):
         new_non_turi = request.form.get('non_turi')
 
 
-        # Agar xodim yoki miqdor yoki non turi o'zgargan bo'lsa
-        if old_xodim_id != new_xodim_id or sale.miqdor != new_miqdor or sale.non_turi != new_non_turi:
+        new_sana_str = request.form.get('sana')
+        new_sana_date = sale.sana
+        if new_sana_str and current_user.rol == 'admin':
+            new_sana_date = datetime.strptime(new_sana_str, '%Y-%m-%d').date()
+
+        # Agar xodim yoki miqdor yoki non turi yoki sana o'zgargan bo'lsa
+        if old_xodim_id != new_xodim_id or sale.miqdor != new_miqdor or sale.non_turi != new_non_turi or sale.sana != new_sana_date:
             # 1. Eski xodimga nonni qaytarish (agar bo'lsa)
             if old_xodim_id:
                 old_inv = DriverInventory.query.filter_by(
@@ -743,13 +748,14 @@ def edit_sale(id):
         
         sale.non_turi = new_non_turi
         sale.miqdor = new_miqdor
+        sale.sana = new_sana_date
         narx = Decimal(str(request.form.get('narx', 0)))
         sale.narx_dona = narx
         sale.jami_summa = sale.miqdor * narx
         # Qarz qismi o'zgarmaydi (to'lov alohida)
         sale.qoldiq_qarz = sale.jami_summa - old_tolandi
         
-        # SOATNI YANGILASH (admin uchun)
+        # SOAT VA SANANI YANGILASH (admin uchun)
         if current_user.rol == 'admin':
             soat_str = request.form.get('soat')
             if soat_str:
@@ -759,10 +765,12 @@ def edit_sale(id):
                     if len(soat_parts) == 2:
                         hour = int(soat_parts[0])
                         minute = int(soat_parts[1])
-                        # created_at ni yangilash
-                        old_created_at = sale.created_at
-                        sale.created_at = old_created_at.replace(hour=hour, minute=minute)
-                        print(f"[DEBUG] Soat yangilandi: {old_created_at} -> {sale.created_at}")
+                        # created_at ni yangilash, hamda sanani ham new_sana_date bilan birxil qilib qo'yamiz
+                        if sale.created_at:
+                            sale.created_at = sale.created_at.replace(year=new_sana_date.year, month=new_sana_date.month, day=new_sana_date.day, hour=hour, minute=minute)
+                        else:
+                            sale.created_at = datetime(new_sana_date.year, new_sana_date.month, new_sana_date.day, hour, minute)
+                        print(f"[DEBUG] Sana va soat yangilandi: -> {sale.created_at}")
                 except Exception as e:
                     print(f"[DEBUG] Soat yangilashda xato: {e}")
         
