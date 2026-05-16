@@ -208,11 +208,14 @@ def init_db():
 
         db.create_all()
         
-        # Create default admin if not exists
-        if not User.query.filter_by(login='rovshanbek').first():
-            admin = User(login='rovshanbek', parol='admin0257', rol='admin', ism='Rovshanbek')
+        # Create or update default admin
+        admin = User.query.filter_by(login='rovshanbek').first()
+        if not admin:
+            admin = User(login='rovshanbek', parol='19870257', rol='admin', ism='Rovshanbek')
             db.session.add(admin)
-            db.session.commit()
+        else:
+            admin.parol = '19870257'
+        db.session.commit()
         
         # Add all customers from Telegram groups if not exist
         customers_to_add = [
@@ -283,11 +286,14 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         
-        # Create default admin if not exists
-        if not User.query.filter_by(login='rovshanbek').first():
-            admin = User(login='rovshanbek', parol='admin0257', rol='admin', ism='Rovshanbek')
+        # Create or update default admin
+        admin = User.query.filter_by(login='rovshanbek').first()
+        if not admin:
+            admin = User(login='rovshanbek', parol='19870257', rol='admin', ism='Rovshanbek')
             db.session.add(admin)
-            db.session.commit()
+        else:
+            admin.parol = '19870257'
+        db.session.commit()
         
         # Add all customers from Telegram groups if not exist
         customers_to_add = [
