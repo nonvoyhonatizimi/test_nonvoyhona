@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoPremium - O'zbekistonning eng ishonchli avtomarketi</title>
+    <!-- Plus Jakarta Sans - Premium Shrift -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Premium Navbar -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <i class="fa-solid fa-car-rear text-primary"></i> Auto<span>Premium</span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Katalog</a>
+                <a href="/compare" class="nav-link">Solishtirish</a>
+                <a href="#" class="nav-link" id="openFavoritesBtn">
+                    Saqlanganlar <span id="favCount" class="badge">0</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <button id="themeToggleBtn" class="btn-icon theme-toggle" title="Kechki rejim">
+                    <i class="fa-regular fa-moon"></i>
+                </button>
+                <a href="/admin" class="btn-primary"><i class="fa-solid fa-plus"></i> E'lon berish</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Premium Footer -->
+    <footer>
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <div class="logo"><i class="fa-solid fa-car-rear text-primary"></i> Auto<span>Premium</span></div>
+                <p>O'zbekistondagi eng yirik va ishonchli premium avtomobillar savdo platformasi. Oson soting, ishonchli xarid qiling.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#"><i class="fa-brands fa-telegram"></i></a>
+                    <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+                </div>
+            </div>
+            <div class="footer-links">
+                <h3>Kompaniya</h3>
+                <a href="#">Biz haqimizda</a>
+                <a href="#">Foydalanish shartlari</a>
+                <a href="#">Maxfiylik siyosati</a>
+            </div>
+            <div class="footer-links">
+                <h3>Yordam</h3>
+                <a href="#">Aloqa</a>
+                <a href="#">Ko'p so'raladigan savollar</a>
+                <a href="#">Mashinani qanday sotaman?</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 AutoPremium MCHJ. Barcha huquqlar himoyalangan. Dasturchi: Sanjar (StartUp).</p>
+        </div>
+    </footer>
+
+    <!-- Favorites Modal -->
+    <div class="modal-overlay" id="favoritesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Saqlangan mashinalar</h2>
+                <button class="btn-icon close-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="favoritesList">
+                <!-- JS to'ldiradi -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

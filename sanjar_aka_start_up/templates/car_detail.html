@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container detail-page-wrapper">
+    <!-- Non-intrusive Breadcrumbs -->
+    <div class="breadcrumbs">
+        <a href="/">Bosh sahifa</a> <i class="fa-solid fa-chevron-right"></i>
+        <a href="/?brand={{ car.brand }}">{{ car.brand }}</a> <i class="fa-solid fa-chevron-right"></i>
+        <span>{{ car.model }} ({{ car.year }})</span>
+    </div>
+
+    <div class="detail-grid">
+        <!-- Image Section -->
+        <div class="detail-gallery">
+            <img src="{{ url_for('static', filename='uploads/' + car.image) }}" alt="{{ car.brand }} {{ car.model }}" class="main-product-image">
+        </div>
+        
+        <!-- Info Section -->
+        <div class="detail-info">
+            <div class="detail-header">
+                <h1>{{ car.brand }} {{ car.model }} <span>{{ car.year }}</span></h1>
+                <div class="detail-price">${{ "{:,.0f}".format(car.price) }}</div>
+            </div>
+            
+            <div class="detail-meta">
+                <span class="meta-item"><i class="fa-regular fa-eye"></i> {{ car.views }} marta ko'rilgan</span>
+                <span class="meta-item"><i class="fa-regular fa-calendar"></i> Qo'shilgan: {{ car.created_at.strftime('%d.%m.%Y') }}</span>
+            </div>
+
+            <!-- Professional Specs Grid -->
+            <div class="specs-grid">
+                <div class="spec-box">
+                    <div class="spec-icon"><i class="fa-solid fa-road"></i></div>
+                    <div class="spec-details">
+                        <small>Yurgan masofasi</small>
+                        <strong>{{ "{:,.0f}".format(car.mileage) }} km</strong>
+                    </div>
+                </div>
+                <div class="spec-box">
+                    <div class="spec-icon"><i class="fa-solid fa-gears"></i></div>
+                    <div class="spec-details">
+                        <small>Uzatmalar qutisi</small>
+                        <strong>{{ car.transmission }}</strong>
+                    </div>
+                </div>
+                <div class="spec-box">
+                    <div class="spec-icon"><i class="fa-solid fa-gas-pump"></i></div>
+                    <div class="spec-details">
+                        <small>Yoqilg'i turi</small>
+                        <strong>{{ car.fuel_type }}</strong>
+                    </div>
+                </div>
+                <div class="spec-box">
+                    <div class="spec-icon"><i class="fa-solid fa-palette"></i></div>
+                    <div class="spec-details">
+                        <small>Avtomobil rangi</small>
+                        <strong>{{ car.color }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-description">
+                <h3>Sotuvchining izohi</h3>
+                <div class="desc-content">
+                    {{ car.description or "Sotuvchi qo'shimcha ma'lumot kiritmagan. Mashina haqida batafsil ma'lumot olish uchun sotuvchi bilan bog'laning." }}
+                </div>
+            </div>
+
+            <!-- Commercial Call to Action -->
+            <div class="detail-actions">
+                <button class="btn-primary btn-massive w-100" onclick="alert('Sotuvchi raqami: +998 90 123 45 67')">
+                    <i class="fa-solid fa-phone"></i> Sotuvchi bilan bog'lanish
+                </button>
+                <div class="action-row">
+                    <button class="btn-outline w-100 fav-btn" data-id="{{ car.id }}">
+                        <i class="fa-regular fa-heart"></i> Saqlash
+                    </button>
+                    <button class="btn-outline w-100 compare-btn-add" data-id="{{ car.id }}">
+                        <i class="fa-solid fa-code-compare"></i> Solishtirish
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Similar Cars cross-selling -->
+    {% if similar_cars %}
+    <div class="similar-cars-section">
+        <h2 class="section-title">Shu markadagi boshqa avtomobillar</h2>
+        <div class="cars-grid">
+            {% for scar in similar_cars %}
+            <a href="{{ url_for('car_detail', car_id=scar.id) }}" class="product-card">
+                <div class="card-image-wrapper">
+                    <img src="{{ url_for('static', filename='uploads/' + scar.image) }}" alt="img">
+                    <div class="card-badges"><span class="badge-year">{{ scar.year }}</span></div>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">{{ scar.brand }} {{ scar.model }}</h3>
+                    <div class="card-price">${{ "{:,.0f}".format(scar.price) }}</div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

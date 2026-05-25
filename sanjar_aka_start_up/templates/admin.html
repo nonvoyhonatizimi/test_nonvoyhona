@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="saas-admin-layout">
+    <!-- SaaS Sidebar -->
+    <aside class="saas-sidebar">
+        <div class="user-profile-box">
+            <div class="avatar"><i class="fa-solid fa-user-tie"></i></div>
+            <div class="user-info">
+                <h4>Avtosalon Boshqaruvi</h4>
+                <span>Super Admin</span>
+            </div>
+        </div>
+        <nav class="saas-nav">
+            <a href="#" class="active"><i class="fa-solid fa-chart-pie"></i> Asosiy Panel</a>
+            <a href="#add-form"><i class="fa-solid fa-plus"></i> Yangi E'lon</a>
+            <a href="#listings"><i class="fa-solid fa-table-list"></i> E'lonlar Ro'yxati</a>
+            <a href="/"><i class="fa-solid fa-globe"></i> Saytga qaytish</a>
+        </nav>
+    </aside>
+
+    <!-- SaaS Main Area -->
+    <div class="saas-content">
+        <div class="dashboard-header">
+            <h1>Xush kelibsiz, Admin</h1>
+            <p class="text-muted">Platformadagi barcha e'lonlar va statistikalarni boshqaring.</p>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon bg-blue-light text-blue"><i class="fa-solid fa-car"></i></div>
+                <div class="kpi-details">
+                    <span class="kpi-label">Sotuvdagi Mashinalar</span>
+                    <span class="kpi-value">{{ cars|length }} ta</span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon bg-green-light text-green"><i class="fa-solid fa-chart-line"></i></div>
+                <div class="kpi-details">
+                    <span class="kpi-label">Jami Ko'rishlar</span>
+                    <span class="kpi-value">{{ total_views }} marta</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Product Form -->
+        <div class="saas-panel" id="add-form">
+            <div class="panel-header">
+                <h2><i class="fa-solid fa-upload"></i> Yangi E'lon Joylash</h2>
+            </div>
+            <div class="panel-body">
+                <form action="{{ url_for('add_car') }}" method="POST" enctype="multipart/form-data" class="premium-form">
+                    <div class="form-row-3">
+                        <div class="input-wrap"><label>Marka (Brand)</label><input type="text" name="brand" required placeholder="Masalan: Mercedes-Benz"></div>
+                        <div class="input-wrap"><label>Model</label><input type="text" name="model" required placeholder="Masalan: S-Class"></div>
+                        <div class="input-wrap"><label>Narxi ($)</label><input type="number" name="price" required placeholder="120000"></div>
+                    </div>
+                    <div class="form-row-3 mt-3">
+                        <div class="input-wrap"><label>Ishlab chiqarilgan yili</label><input type="number" name="year" required placeholder="2024"></div>
+                        <div class="input-wrap"><label>Yurgan masofasi (km)</label><input type="number" name="mileage" required placeholder="0"></div>
+                        <div class="input-wrap"><label>Rangi</label><input type="text" name="color" required placeholder="Qora"></div>
+                    </div>
+                    <div class="form-row-2 mt-3">
+                        <div class="input-wrap">
+                            <label>Yoqilg'i turi</label>
+                            <select name="fuel_type" required>
+                                <option value="Benzin">Benzin</option><option value="Elektr">Elektr</option><option value="Metan">Metan</option><option value="Dizel">Dizel</option>
+                            </select>
+                        </div>
+                        <div class="input-wrap">
+                            <label>Uzatmalar qutisi</label>
+                            <select name="transmission" required>
+                                <option value="Avtomat">Avtomat</option><option value="Mexanika">Mexanika</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-wrap mt-3">
+                        <label>Batafsil ma'lumot (Description)</label>
+                        <textarea name="description" rows="4" placeholder="Avtomobil haqida barcha kerakli ma'lumotlarni yozing..."></textarea>
+                    </div>
+                    <div class="input-wrap mt-3">
+                        <label>Asosiy Rasm (Yuqori sifatli rasm yuklang)</label>
+                        <div class="file-drop-area">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <p>Rasmni tanlang (JPEG, PNG)</p>
+                            <input type="file" name="image" accept="image/*" required class="hidden-file-input">
+                        </div>
+                    </div>
+                    <div class="form-actions mt-4 text-right">
+                        <button type="submit" class="btn-primary btn-large">Platformaga Qo'shish</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="saas-panel" id="listings">
+            <div class="panel-header flex-between">
+                <h2><i class="fa-solid fa-list"></i> Barcha E'lonlar</h2>
+            </div>
+            <div class="panel-body p-0">
+                <div class="table-responsive">
+                    <table class="saas-table">
+                        <thead>
+                            <tr>
+                                <th>Avtomobil</th>
+                                <th>Narxi</th>
+                                <th>Ko'rishlar</th>
+                                <th>Sana</th>
+                                <th class="text-right">Amal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for car in cars %}
+                            <tr>
+                                <td>
+                                    <div class="table-product">
+                                        <img src="{{ url_for('static', filename='uploads/' + car.image) }}" alt="img">
+                                        <div class="table-product-info">
+                                            <strong>{{ car.brand }} {{ car.model }}</strong>
+                                            <span>{{ car.year }} yil • {{ car.color }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><strong class="text-primary">${{ "{:,.0f}".format(car.price) }}</strong></td>
+                                <td><span class="status-badge"><i class="fa-regular fa-eye"></i> {{ car.views }}</span></td>
+                                <td class="text-muted">{{ car.created_at.strftime('%d.%m.%Y') }}</td>
+                                <td class="text-right">
+                                    <form action="{{ url_for('delete_car', car_id=car.id) }}" method="POST" onsubmit="return confirm('Rostdan ham o\'chirasizmi?');">
+                                        <button type="submit" class="btn-icon-danger" title="O'chirish"><i class="fa-regular fa-trash-can"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center p-5 text-muted">Hozircha mashinalar qo'shilmagan.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

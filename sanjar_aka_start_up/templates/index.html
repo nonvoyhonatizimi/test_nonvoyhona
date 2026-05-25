@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Premium Hero Section -->
+<div class="hero">
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+        <h1>Orzuingizdagi avtomobilni oson toping</h1>
+        <p>Minglab ishonchli va tekshirilgan avtomobillar bitta platformada.</p>
+        
+        <!-- Floating Search Box -->
+        <div class="hero-search-box">
+            <form action="/" method="GET" class="hero-search-form">
+                <div class="search-input-group">
+                    <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                    <input type="text" name="brand" placeholder="Marka yoki model..." value="{{ request.args.get('brand', '') }}">
+                </div>
+                <div class="search-divider"></div>
+                <div class="search-input-group">
+                    <i class="fa-solid fa-gears text-muted"></i>
+                    <select name="transmission">
+                        <option value="">Uzatmalar qutisi</option>
+                        <option value="Avtomat" {% if request.args.get('transmission') == 'Avtomat' %}selected{% endif %}>Avtomat</option>
+                        <option value="Mexanika" {% if request.args.get('transmission') == 'Mexanika' %}selected{% endif %}>Mexanika</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary btn-large">Qidirish</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="container catalog-layout">
+    <!-- Professional Sidebar Filters -->
+    <aside class="sidebar-filters">
+        <div class="filter-header">
+            <h3><i class="fa-solid fa-sliders"></i> Filtrlar</h3>
+            <a href="/" class="text-primary text-sm font-medium">Tozalash</a>
+        </div>
+        <form action="/" method="GET" class="filter-form">
+            <div class="filter-group">
+                <label>Narx oralig'i ($)</label>
+                <div class="range-inputs">
+                    <input type="number" name="min_price" placeholder="Dan" value="{{ request.args.get('min_price', '') }}">
+                    <span>-</span>
+                    <input type="number" name="max_price" placeholder="Gacha" value="{{ request.args.get('max_price', '') }}">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>Yoqilg'i turi</label>
+                <div class="custom-select-wrapper">
+                    <select name="fuel_type" class="custom-select">
+                        <option value="">Barchasi</option>
+                        <option value="Benzin" {% if request.args.get('fuel_type') == 'Benzin' %}selected{% endif %}>Benzin</option>
+                        <option value="Metan" {% if request.args.get('fuel_type') == 'Metan' %}selected{% endif %}>Metan</option>
+                        <option value="Elektr" {% if request.args.get('fuel_type') == 'Elektr' %}selected{% endif %}>Elektr</option>
+                        <option value="Dizel" {% if request.args.get('fuel_type') == 'Dizel' %}selected{% endif %}>Dizel</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary w-100">Natijalarni ko'rish</button>
+        </form>
+    </aside>
+
+    <!-- Commercial Grade Catalog Grid -->
+    <div class="catalog-results">
+        <div class="results-header">
+            <h2>Avtomobillar ro'yxati <span>({{ cars|length }} ta natija)</span></h2>
+        </div>
+        
+        <div class="cars-grid">
+            {% for car in cars %}
+            <a href="{{ url_for('car_detail', car_id=car.id) }}" class="product-card">
+                <div class="card-image-wrapper">
+                    <img src="{{ url_for('static', filename='uploads/' + car.image) }}" alt="{{ car.brand }}">
+                    <div class="card-badges">
+                        <span class="badge-year">{{ car.year }} yil</span>
+                    </div>
+                    <button class="btn-fav fav-btn" data-id="{{ car.id }}" onclick="event.preventDefault();"><i class="fa-regular fa-heart"></i></button>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">{{ car.brand }} {{ car.model }}</h3>
+                    <div class="card-price">${{ "{:,.0f}".format(car.price) }}</div>
+                    
+                    <div class="card-specs">
+                        <div class="spec-mini" title="Yurgan masofasi">
+                            <i class="fa-solid fa-road"></i> {{ "{:,.0f}".format(car.mileage) }} km
+                        </div>
+                        <div class="spec-mini" title="Yoqilg'i turi">
+                            <i class="fa-solid fa-gas-pump"></i> {{ car.fuel_type }}
+                        </div>
+                        <div class="spec-mini" title="Uzatmalar qutisi">
+                            <i class="fa-solid fa-gears"></i> {{ car.transmission }}
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% else %}
+            <div class="empty-state-full">
+                <i class="fa-solid fa-car-on text-muted" style="font-size: 48px; margin-bottom: 20px;"></i>
+                <h3>Hech narsa topilmadi</h3>
+                <p class="text-muted">Boshqa filtr parametrlarini tanlab ko'ring.</p>
+                <a href="/" class="btn-outline mt-3">Barcha mashinalarni ko'rish</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

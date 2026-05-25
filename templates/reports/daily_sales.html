@@ -260,6 +260,20 @@
         <h5 class="mb-0">{{ driver }} - Sotuvlar</h5>
     </div>
     <div class="card-body">
+        <!-- Non turlari bo'yicha haydovchi kesimida -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h6 class="text-info mb-3"><i class="fas fa-bread-slice me-2"></i>Non turlari bo'yicha tarqatilgan:</h6>
+                <div class="d-flex flex-wrap gap-2">
+                {% for turi, info in data.non_turlari.items() %}
+                    <span class="badge bg-light text-dark border p-2 shadow-sm" style="font-size: 0.95rem;">
+                        {{ turi }}: <strong>{{ info.miqdor }} dona</strong>
+                    </span>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+
         <!-- Qarzga sotuvlar -->
         {% if data.qarz_sotuvlar %}
         <h6 class="text-warning mb-3">Qarzga sotuvlar:</h6>
@@ -271,6 +285,7 @@
                         <th>Non turi</th>
                         <th>Miqdor</th>
                         <th>Summa</th>
+                        <th>To'landi</th>
                         <th>Qarz</th>
                     </tr>
                 </thead>
@@ -281,6 +296,7 @@
                         <td>{{ sale.non_turi }}</td>
                         <td>{{ sale.miqdor }} dona</td>
                         <td>{{ "{:,.0f}".format(sale.jami_summa) }} so'm</td>
+                        <td class="text-success">{{ "{:,.0f}".format(sale.tolandi) }} so'm</td>
                         <td class="text-danger">{{ "{:,.0f}".format(sale.qoldiq_qarz) }} so'm</td>
                     </tr>
                     {% endfor %}

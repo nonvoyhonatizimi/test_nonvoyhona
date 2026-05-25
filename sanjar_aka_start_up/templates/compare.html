@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container compare-page-wrapper" style="margin-top: 60px; margin-bottom: 80px; min-height: 50vh;">
+    <div class="page-header text-center" style="margin-bottom: 40px;">
+        <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 12px;">Solishtirish</h1>
+        <p class="text-muted" style="font-size: 16px;">Ikki xil avtomobilning texnik xususiyatlarini batafsil qiyoslang.</p>
+        <button id="clearCompareBtn" class="btn-outline mt-3"><i class="fa-solid fa-trash-can"></i> Ro'yxatni tozalash</button>
+    </div>
+
+    <div id="compareGrid" class="compare-container-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+        <!-- JS to'ldiradi -->
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const compareGrid = document.getElementById('compareGrid');
+        const clearCompareBtn = document.getElementById('clearCompareBtn');
+        let compareList = JSON.parse(localStorage.getItem('compare')) || [];
+
+        if (compareGrid && compareList.length > 0) {
+            async function loadCompare() {
+                const res = await fetch(`/api/cars?ids=${compareList.join(',')}`);
+                const cars = await res.json();
+                
+                if (cars.length > 0) {
+                    compareGrid.innerHTML = cars.map(car => `
+                        <div class="product-card" style="padding: 24px;">
+                            <img src="${car.image}" style="width:100%; height:250px; object-fit:cover; border-radius: 12px; margin-bottom: 24px; box-shadow: var(--shadow-sm);">
+                            <h2 style="font-size: 24px; margin-bottom: 20px;">${car.brand} ${car.model}</h2>
+                            
+                            <div style="display:flex; justify-content:space-between; padding: 16px 0; border-bottom: 1px solid var(--border);">
+                                <span class="text-muted">Narxi:</span>
+                                <strong class="text-primary" style="font-size:20px;">$${car.price.toLocaleString()}</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; padding: 16px 0; border-bottom: 1px solid var(--border);">
+                                <span class="text-muted">Yili:</span>
+                                <strong>${car.year}</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; padding: 16px 0; border-bottom: 1px solid var(--border);">
+                                <span class="text-muted">Yurgan masofasi:</span>
+                                <strong>${car.mileage.toLocaleString()} km</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; padding: 16px 0; border-bottom: 1px solid var(--border);">
+                                <span class="text-muted">Uzatmalar qutisi:</span>
+                                <strong>${car.transmission}</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; padding: 16px 0; border-bottom: 1px solid var(--border);">
+                                <span class="text-muted">Yoqilg'i:</span>
+                                <strong>${car.fuel_type}</strong>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+            loadCompare();
+        } else if (compareGrid) {
+            compareGrid.style.gridTemplateColumns = '1fr';
+            compareGrid.innerHTML = `
+                <div class="text-center p-5" style="background: var(--bg-card); border: 1px dashed var(--border); border-radius: 16px; padding: 60px 20px;">
+                    <i class="fa-solid fa-code-compare text-muted" style="font-size: 48px; margin-bottom: 20px;"></i>
+                    <h3>Solishtirish uchun mashina yo'q</h3>
+                    <p class="text-muted mt-3">Katalogdan 2 ta mashina tanlang va solishtiring</p>
+                    <a href="/" class="btn-primary mt-4">Katalogga o'tish</a>
+                </div>
+            `;
+        }
+
+        if (clearCompareBtn) {
+            clearCompareBtn.addEventListener('click', () => {
+                localStorage.removeItem('compare');
+                window.location.reload();
+            });
+        }
+    });
+</script>
+{% endblock %}

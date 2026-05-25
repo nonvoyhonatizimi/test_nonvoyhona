@@ -493,7 +493,7 @@ def daily_sales():
     # Sotuvlarni olish - FAQAT HOZIRGI SMENA (== emas >=)
     query = Sale.query.filter(Sale.smena == current_smena)
     if driver_id:
-        pass
+        query = query.filter(Sale.xodim_id == driver_id)
     
     sales = query.order_by(Sale.sana.desc()).all()
     print(f"[DEBUG] Topilgan sotuvlar soni: {len(sales)}")
@@ -501,22 +501,30 @@ def daily_sales():
     # Haydovchi bo'yicha guruhlash
     driver_sales = {}
     for sale in sales:
-        # Bu yerda haydovchi aniqlanishi kerak (hozircha mijoz nomidan)
-        driver_name = "Admin"  # Vaqtinchalik
+        driver_name = sale.employee.ism if sale.employee else (sale.xodim or "Noma'lum")
+        
         if driver_name not in driver_sales:
             driver_sales[driver_name] = {
                 'qarz_sotuvlar': [],
                 'naqt_sotuvlar': [],
                 'jami_qarz': 0,
-                'jami_naqt': 0
+                'jami_naqt': 0,
+                'non_turlari': {}
             }
         
         if sale.qoldiq_qarz > 0:
             driver_sales[driver_name]['qarz_sotuvlar'].append(sale)
             driver_sales[driver_name]['jami_qarz'] += sale.qoldiq_qarz
+            if sale.tolandi > 0:
+                driver_sales[driver_name]['jami_naqt'] += sale.tolandi
         else:
             driver_sales[driver_name]['naqt_sotuvlar'].append(sale)
             driver_sales[driver_name]['jami_naqt'] += sale.tolandi
+            
+        if sale.non_turi not in driver_sales[driver_name]['non_turlari']:
+            driver_sales[driver_name]['non_turlari'][sale.non_turi] = {'miqdor': 0, 'summa': 0}
+        driver_sales[driver_name]['non_turlari'][sale.non_turi]['miqdor'] += sale.miqdor
+        driver_sales[driver_name]['non_turlari'][sale.non_turi]['summa'] += sale.jami_summa
     
     # Qarz to'lovlarini olish (Haydovchi to'lovlari orqali - batafsil ma'lumot uchun)
     from models import DriverPayment
