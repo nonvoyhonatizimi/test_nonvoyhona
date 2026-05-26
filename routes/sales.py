@@ -116,6 +116,49 @@ Xodim: {sale_data['xodim']}
         print(f"[XATO] Telegram exception: {e}")
         return False
 
+def check_debt_limit(customer, sale_id=None):
+    """Check if customer debt exceeds their limit, and notify if so."""
+    from models import db, Bildirishnoma, uz_datetime
+    
+    if customer and customer.kredit_limit > 0 and customer.jami_qarz > customer.kredit_limit:
+        today = uz_datetime().date()
+        # Check if we already notified for this customer today
+        existing_notif = Bildirishnoma.query.filter(
+            Bildirishnoma.mijoz_id == customer.id,
+            db.func.date(Bildirishnoma.created_at) == today,
+            Bildirishnoma.turi == 'qarz'
+        ).first()
+        
+        if not existing_notif:
+            # Add Notification for Admin
+            notif = Bildirishnoma(
+                mijoz_id=customer.id,
+                sarlavha="Qarz limitdan oshdi",
+                matn=f"{customer.nomi} mijozining qarzi limitdan ({float(customer.kredit_limit):,.0f} so'm) oshib ketdi. Jami qarz: {float(customer.jami_qarz):,.0f} so'm.",
+                turi='qarz',
+                created_at=uz_datetime()
+            )
+            db.session.add(notif)
+            db.session.commit()
+            
+            # Send Telegram Notification to the Customer Group
+            chat_id = customer.telegram_chat_id
+            if not chat_id:
+                customer_lower = customer.nomi.lower().strip()
+                for key, value in CUSTOMER_GROUPS.items():
+                    if key.lower() in customer_lower or customer_lower in key.lower():
+                        chat_id = value
+                        break
+            
+            if chat_id:
+                try:
+                    message = f"⚠️ <b>DIQQAT!</b>\n\nHurmatli <b>{customer.nomi}</b>!\nSizning umumiy qarzingiz belgilangan limitdan ({float(customer.kredit_limit):,.0f} so'm) oshib ketdi.\n\n<b>Joriy qarzingiz: {float(customer.jami_qarz):,.0f} so'm.</b>\n\nIltimos, tez orada to'lovni amalga oshiring."
+                    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                    payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+                    requests.post(url, json=payload, timeout=5)
+                except Exception as e:
+                    print(f"[XATO] Telegram notification (debt limit) failed for {customer.nomi}: {e}")
+
 def send_daily_sales_reports():
     """Send daily sales summary to all customers at 23:59"""
     from models import db, Sale, Customer, uz_datetime
@@ -631,6 +674,10 @@ def add_sale():
             )
             db.session.add(driver_payment)
             db.session.commit()
+            
+        # Check debt limits
+        if customer:
+            check_debt_limit(customer, new_sale.id)
         
         # Send Telegram notification (faqat sotuv bo'lsa)
         if adashilgan != 'yes' and customer:
@@ -792,6 +839,7 @@ def edit_sale(id):
                 if new_customer:
                     new_customer.jami_qarz += sale.qoldiq_qarz
                     db.session.add(new_customer)
+                    check_debt_limit(new_customer, sale.id)
         
         # Agar to'lov qilingan bo'lsa (tolandi o'zgargan), haydovchi to'lovini ham yangilash
         # (Template-da tahrirlab bo'lmaydi deyilibdi, lekin har ehtimolga qarshi qoldiramiz)

@@ -130,6 +130,7 @@ from routes.payroll import payroll_bp
 from routes.customer_portal import customer_portal_bp
 from routes.ai_assistant import ai_assistant_bp
 from routes.comments import comments_bp
+from routes.notifications import notifications_bp
 
 app.register_blueprint(employees_bp)
 app.register_blueprint(customers_bp)
@@ -142,6 +143,15 @@ app.register_blueprint(payroll_bp)
 app.register_blueprint(customer_portal_bp)
 app.register_blueprint(ai_assistant_bp)
 app.register_blueprint(comments_bp)
+app.register_blueprint(notifications_bp)
+
+@app.context_processor
+def inject_notifications():
+    from models import Bildirishnoma
+    if current_user.is_authenticated and current_user.rol == 'admin':
+        unread_count = Bildirishnoma.query.filter_by(is_read=False).count()
+        return dict(unread_notifications_count=unread_count)
+    return dict(unread_notifications_count=0)
 
 @app.route('/sw.js')
 def serve_sw():
@@ -195,7 +205,8 @@ def init_db():
             "ALTER TABLE haydovchi_tolovlari ADD COLUMN IF NOT EXISTS collector_id INTEGER REFERENCES xodimlar(id)",
             "ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS latitude VARCHAR(50)",
             "ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS longitude VARCHAR(50)",
-            "ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS last_location_time TIMESTAMP"
+            "ALTER TABLE foydalanuvchilar ADD COLUMN IF NOT EXISTS last_location_time TIMESTAMP",
+            "CREATE TABLE IF NOT EXISTS bildirishnomalar (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES foydalanuvchilar(id), mijoz_id INTEGER REFERENCES mijozlar(id), sarlavha VARCHAR(100), matn TEXT, turi VARCHAR(50) DEFAULT 'qarz', is_read BOOLEAN DEFAULT FALSE, created_at TIMESTAMP)"
         ]
         
         for sql in migrations:

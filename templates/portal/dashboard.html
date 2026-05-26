@@ -4,6 +4,28 @@
 {% block header_title %}Xush kelibsiz, {{ customer.nomi }}!{% endblock %}
 
 {% block content %}
+{% if customer.kredit_limit and customer.kredit_limit > 0 and customer.jami_qarz > customer.kredit_limit %}
+<div class="alert alert-danger shadow border-danger mb-4" role="alert" style="border-width: 2px;">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-exclamation-triangle fa-2x me-3 blinking-icon"></i>
+        <div>
+            <h4 class="alert-heading fw-bold mb-1">DIQQAT!</h4>
+            <p class="mb-0" style="font-size: 1.1rem;">Sizning qarzingiz belgilangan limitdan ({{ "{:,.0f}".format(customer.kredit_limit) }} so'm) oshib ketdi. Iltimos, tez orada kassa qiling (qarzni to'lang)!</p>
+        </div>
+    </div>
+</div>
+<style>
+@keyframes blink {
+    0% { opacity: 1; color: #dc3545; }
+    50% { opacity: 0.5; color: #ff0000; }
+    100% { opacity: 1; color: #dc3545; }
+}
+.blinking-icon {
+    animation: blink 1s linear infinite;
+}
+</style>
+{% endif %}
+
 <div class="row mb-4">
     <!-- Chap tomon: Hozirgi qarz va Haydovchilar -->
     <div class="col-md-4 mb-3">

@@ -177,6 +177,17 @@
                     <div class="container-fluid">
                         <span class="navbar-brand mb-0 h1 text-muted">{% block header_title %}Bosh sahifa{% endblock %}</span>
                         <div class="d-flex align-items-center">
+                            {% if current_user.rol == 'admin' %}
+                            <a href="{{ url_for('notifications.list_notifications') }}" class="text-secondary position-relative me-4 fs-5">
+                                <i class="fas fa-bell"></i>
+                                {% if unread_notifications_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                                    {{ unread_notifications_count }}
+                                    <span class="visually-hidden">unread messages</span>
+                                </span>
+                                {% endif %}
+                            </a>
+                            {% endif %}
                             <span class="me-3">{{ current_user.ism }} ({{ current_user.rol }})</span>
                             <div class="dropdown">
                                 <img src="https://ui-avatars.com/api/?name={{ current_user.ism }}&background=random" class="rounded-circle" width="35" height="35" alt="User">

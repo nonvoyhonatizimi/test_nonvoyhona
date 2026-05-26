@@ -299,3 +299,16 @@ class DriverLocationHistory(db.Model):
     timestamp = db.Column(db.DateTime, default=uz_datetime)
     
     user = db.relationship('User', backref=db.backref('location_history', cascade='all, delete-orphan'))
+
+class Bildirishnoma(db.Model):
+    __tablename__ = 'bildirishnomalar'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('foydalanuvchilar.id'), nullable=True) # Kimga (Adminlarga)
+    mijoz_id = db.Column(db.Integer, db.ForeignKey('mijozlar.id'), nullable=True) # Qaysi mijoz haqida
+    sarlavha = db.Column(db.String(100))
+    matn = db.Column(db.Text)
+    turi = db.Column(db.String(50), default='qarz') # qarz, eslatma va h.k.
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=uz_datetime)
+    
+    mijoz = db.relationship('Customer', backref='bildirishnomalar')
