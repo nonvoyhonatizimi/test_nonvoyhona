@@ -500,32 +500,37 @@ def daily_sales():
     
     # Haydovchi bo'yicha guruhlash
     driver_sales = {}
-    for sale in sales:
-        driver_name = sale.employee.ism if sale.employee else (sale.xodim or "Noma'lum")
+    
+    # Active haydovchilarni boshlang'ich qiymat bilan to'ldirish
+    for d in drivers:
+        driver_sales[d.ism] = {
+            'qarz_sotuvlar': [],
+            'naqt_sotuvlar': [],
+            'jami_qarz': Decimal('0'),
+            'jami_naqt': Decimal('0'),
+            'non_turlari': {},
+            'ozi_undirgan_ozidan': Decimal('0'),
+            'ozi_undirgan_boshqadan': [],
+            'boshqa_undirgan_ozidan': [],
+            'jami_ozi_undirgan_boshqadan': Decimal('0'),
+            'jami_boshqa_undirgan_ozidan': Decimal('0')
+        }
         
-        if driver_name not in driver_sales:
-            driver_sales[driver_name] = {
+    def init_driver(name):
+        if name not in driver_sales:
+            driver_sales[name] = {
                 'qarz_sotuvlar': [],
                 'naqt_sotuvlar': [],
-                'jami_qarz': 0,
-                'jami_naqt': 0,
-                'non_turlari': {}
+                'jami_qarz': Decimal('0'),
+                'jami_naqt': Decimal('0'),
+                'non_turlari': {},
+                'ozi_undirgan_ozidan': Decimal('0'),
+                'ozi_undirgan_boshqadan': [],
+                'boshqa_undirgan_ozidan': [],
+                'jami_ozi_undirgan_boshqadan': Decimal('0'),
+                'jami_boshqa_undirgan_ozidan': Decimal('0')
             }
-        
-        if sale.qoldiq_qarz > 0:
-            driver_sales[driver_name]['qarz_sotuvlar'].append(sale)
-            driver_sales[driver_name]['jami_qarz'] += sale.qoldiq_qarz
-            if sale.tolandi > 0:
-                driver_sales[driver_name]['jami_naqt'] += sale.tolandi
-        else:
-            driver_sales[driver_name]['naqt_sotuvlar'].append(sale)
-            driver_sales[driver_name]['jami_naqt'] += sale.tolandi
-            
-        if sale.non_turi not in driver_sales[driver_name]['non_turlari']:
-            driver_sales[driver_name]['non_turlari'][sale.non_turi] = {'miqdor': 0, 'summa': 0}
-        driver_sales[driver_name]['non_turlari'][sale.non_turi]['miqdor'] += sale.miqdor
-        driver_sales[driver_name]['non_turlari'][sale.non_turi]['summa'] += sale.jami_summa
-    
+
     # Qarz to'lovlarini olish (Haydovchi to'lovlari orqali - batafsil ma'lumot uchun)
     from models import DriverPayment
     from sqlalchemy.orm import joinedload
@@ -539,14 +544,84 @@ def daily_sales():
         DriverPayment.smena == current_smena,
         DriverPayment.status == 'tolandi'
     ).all()
-    
+
+    # Smena davomida amalga oshirilgan barcha to'lovlar xaritasi
+    smena_payments_map = {p.sale_id: p for p in qarz_tolovlari_details if p.sale_id}
+
+    for sale in sales:
+        driver_name = sale.employee.ism if sale.employee else (sale.xodim or "Noma'lum")
+        init_driver(driver_name)
+        
+        # Sotuv qarzga bo'lganmi yoki yo'qmi
+        if sale.qoldiq_qarz > 0:
+            driver_sales[driver_name]['qarz_sotuvlar'].append(sale)
+            driver_sales[driver_name]['jami_qarz'] += Decimal(str(sale.qoldiq_qarz))
+        else:
+            driver_sales[driver_name]['naqt_sotuvlar'].append(sale)
+            
+        # Sotuvdan tushgan naqd pulni hisoblash (Collector ajratilgan holda)
+        dp = smena_payments_map.get(sale.id)
+        if dp:
+            # Smena davomida qarz yopilgan
+            collected_amount = Decimal(str(dp.summa))
+            initial_payment = Decimal(str(sale.tolandi)) - collected_amount
+            if initial_payment > 0:
+                driver_sales[driver_name]['jami_naqt'] += initial_payment
+        else:
+            # Hech qanday to'lov qilinmagan yoki oddiy sotuv
+            if sale.tolandi > 0:
+                driver_sales[driver_name]['jami_naqt'] += Decimal(str(sale.tolandi))
+            
+        if sale.non_turi not in driver_sales[driver_name]['non_turlari']:
+            driver_sales[driver_name]['non_turlari'][sale.non_turi] = {'miqdor': 0, 'summa': Decimal('0')}
+        driver_sales[driver_name]['non_turlari'][sale.non_turi]['miqdor'] += sale.miqdor
+        driver_sales[driver_name]['non_turlari'][sale.non_turi]['summa'] += Decimal(str(sale.jami_summa))
+
+    for p in qarz_tolovlari_details:
+        collector_name = p.collector.ism if p.collector else "Admin"
+        init_driver(collector_name)
+        
+        seller_name = p.driver.ism if p.driver else (p.sale.xodim if p.sale else "Noma'lum")
+        payment_amount = Decimal(str(p.summa))
+        
+        # Har doim pulni yig'gan odamning jami naqt puliga qo'shiladi!
+        driver_sales[collector_name]['jami_naqt'] += payment_amount
+        
+        # Endi o'zidan yoki boshqadan undirganini ajratamiz
+        if collector_name == seller_name:
+            driver_sales[collector_name]['ozi_undirgan_ozidan'] += payment_amount
+        else:
+            # Boshqa haydovchining qarzini undirgan
+            driver_sales[collector_name]['ozi_undirgan_boshqadan'].append({
+                'mijoz_nomi': p.mijoz.nomi if p.mijoz else "Noma'lum",
+                'summa': payment_amount,
+                'sotuvchi': seller_name,
+                'non_turi': p.sale.non_turi if p.sale else "-",
+                'miqdor': p.sale.miqdor if p.sale else 0,
+                'sana': p.sale.sana if p.sale else None,
+                'eski_qarz': p.sale.smena < current_smena if p.sale else True
+            })
+            driver_sales[collector_name]['jami_ozi_undirgan_boshqadan'] += payment_amount
+            
+            # Sotuvchi haydovchining "boshqa undirgan ozidan" ro'yxatiga qo'shamiz (bizdan ayrilgan)
+            init_driver(seller_name)
+            driver_sales[seller_name]['boshqa_undirgan_ozidan'].append({
+                'mijoz_nomi': p.mijoz.nomi if p.mijoz else "Noma'lum",
+                'summa': payment_amount,
+                'undiruvchi': collector_name,
+                'non_turi': p.sale.non_turi if p.sale else "-",
+                'miqdor': p.sale.miqdor if p.sale else 0,
+                'sana': p.sale.sana if p.sale else None,
+                'eski_qarz': p.sale.smena < current_smena if p.sale else True
+            })
+            driver_sales[seller_name]['jami_boshqa_undirgan_ozidan'] += payment_amount
+            
     # Faqat eski qarzlar (sotuv smenasi hozirgidan kichik bo'lganlar)
     qarz_tolovlari = []
     for p in qarz_tolovlari_details:
         if p.sale and p.sale.smena < current_smena:
             qarz_tolovlari.append(p)
-    
-    from decimal import Decimal
+            
     jami_qarz_tolovlari = sum([Decimal(str(p.summa)) for p in qarz_tolovlari])
     
     # O'tkazishlarni olish (sana filtrisiz)
