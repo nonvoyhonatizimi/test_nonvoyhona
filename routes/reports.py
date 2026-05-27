@@ -261,15 +261,27 @@ Umumiy qarz holati: {float(customer.jami_qarz):,.0f} so'm
 Tanlangan qarzlar tafsiloti:
 """
     
+    total_bread_count = 0
+    bread_types_count = {}
+
     for item in selected_sales:
         s_date_fmt = item.sana.strftime('%d.%m.%Y') if item.sana else 'Noma`lum'
         message += f"\nSana: {s_date_fmt} | {item.non_turi}: {item.total_miqdor} dona"
         message += f"\n   Jami: {Decimal(str(item.total_summa)):,.0f} so'm"
         message += f"\n   To'landi: {Decimal(str(item.total_tolandi)):,.0f} so'm"
         message += f"\n   Qarz: {Decimal(str(item.total_qarz)):,.0f} so'm\n"
+
+        # Count totals
+        total_bread_count += item.total_miqdor
+        bread_types_count[item.non_turi] = bread_types_count.get(item.non_turi, 0) + item.total_miqdor
     
-    message += f"\nYuqoridagi tanlangan qarzlar jami: {total_qarz_for_selected:,.0f} so'm"
+    message += f"\nJami olingan non (tanlangan sanalar): {total_bread_count} dona"
+    for b_type, count in bread_types_count.items():
+        message += f"\n  - {b_type}: {count} dona"
+
+    message += f"\n\nYuqoridagi tanlangan qarzlar jami: {total_qarz_for_selected:,.0f} so'm"
     message += f"\nIltimos, kassa qiling!"
+
     
     # Send to Telegram
     try:
