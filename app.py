@@ -236,8 +236,8 @@ def init_db():
             admin = User(login='rovshanbek', parol=generate_password_hash('19870257'), rol='admin', ism='Rovshanbek')
             db.session.add(admin)
         else:
-            if not admin.parol.startswith('pbkdf2:sha256:'):
-                admin.parol = generate_password_hash('19870257')
+            # Vaqtinchalik: Har qanday holatda parolni yangilab qo'yamiz
+            admin.parol = generate_password_hash('19870257')
         db.session.commit()
         
         # Add all customers from Telegram groups if not exist
@@ -328,8 +328,7 @@ if __name__ == '__main__':
             admin = User(login='rovshanbek', parol=generate_password_hash('19870257'), rol='admin', ism='Rovshanbek')
             db.session.add(admin)
         else:
-            if not admin.parol.startswith('pbkdf2:sha256:'):
-                admin.parol = generate_password_hash('19870257')
+            admin.parol = generate_password_hash('19870257')
         db.session.commit()
         
         # Add all customers from Telegram groups if not exist
