@@ -113,13 +113,19 @@ def login():
             log_action("Kirish", "Foydalanuvchi tizimga kirdi (Master Key)")
             return redirect(url_for('index'))
 
-        user = User.query.filter_by(login=username).first()
+        if username:
+            username = username.strip()
+            user = User.query.filter(db.func.lower(User.login) == username.lower()).first()
+        else:
+            user = None
+            
         if user:
-            # Hybrid password checking to auto-upgrade plaintext to hashes
-            if user.parol.startswith('pbkdf2:sha256:'):
-                is_valid = check_password_hash(user.parol, password)
+            # Parolni xavfsiz tekshirish (str ga aylantirib)
+            user_pass = str(user.parol) if user.parol else ""
+            if user_pass.startswith('pbkdf2:sha256:'):
+                is_valid = check_password_hash(user_pass, password)
             else:
-                is_valid = (user.parol == password)
+                is_valid = (user_pass == password)
                 if is_valid:
                     # Upgrade automatically
                     user.parol = generate_password_hash(password)
