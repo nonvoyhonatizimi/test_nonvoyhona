@@ -154,6 +154,13 @@
                     </li>
                     {% endif %}
 
+                    <hr class="text-white-50">
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'ai_assistant' in request.endpoint %}active{% endif %} text-primary fw-bold" href="{{ url_for('ai_assistant.chat') }}">
+                            <i class="fas fa-robot"></i> AI Yordamchi <span class="badge bg-danger ms-1">Yangi</span>
+                        </a>
+                    </li>
+
                     {% if current_user.customer_id %}
                     <li class="nav-item">
                         <a class="nav-link active" href="{{ url_for('customer_portal.dashboard') }}">
