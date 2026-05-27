@@ -182,6 +182,72 @@ def ask_voice():
         'audio': audio_base64
     })
 
+import json
+import requests
+from datetime import datetime
+
+def get_customer_debt_func(customer_name):
+    customer = Customer.query.filter(Customer.nomi.ilike(f"%{customer_name}%")).first()
+    if customer:
+        return json.dumps({"mijoz": customer.nomi, "qarz": format_num(customer.jami_qarz) + " so'm"})
+    return json.dumps({"xato": f"'{customer_name}' ismli mijoz topilmadi."})
+
+def get_customer_sales_func(customer_name, date_str=None):
+    if not date_str:
+        target_date = uz_datetime().date()
+    else:
+        try:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except:
+            target_date = uz_datetime().date()
+            
+    customer = Customer.query.filter(Customer.nomi.ilike(f"%{customer_name}%")).first()
+    if not customer:
+        return json.dumps({"xato": f"'{customer_name}' ismli mijoz topilmadi."})
+        
+    sales = Sale.query.filter(Sale.mijoz_id == customer.id, Sale.sana == target_date).all()
+    if not sales:
+        return json.dumps({"xabar": f"{customer.nomi} uchun {target_date} sanasida hech qanday savdo topilmadi."})
+        
+    total_sales = sum(s.jami_summa for s in sales)
+    details = {}
+    for s in sales:
+        details[s.non_turi] = details.get(s.non_turi, 0) + s.miqdor
+        
+    return json.dumps({
+        "mijoz": customer.nomi,
+        "sana": str(target_date),
+        "olgan_nonlari": details,
+        "jami_summa": format_num(total_sales) + " so'm"
+    })
+
+def send_telegram_message_func(customer_name, message):
+    TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    if not TELEGRAM_BOT_TOKEN:
+        return json.dumps({"xato": "Telegram bot tokeni sozlanmagan."})
+        
+    customer = Customer.query.filter(Customer.nomi.ilike(f"%{customer_name}%")).first()
+    if not customer:
+        return json.dumps({"xato": f"'{customer_name}' ismli mijoz topilmadi."})
+        
+    chat_id = customer.telegram_chat_id
+    if not chat_id:
+        return json.dumps({"xato": f"'{customer.nomi}' uchun Telegram chat ID kiritilmagan. Uning raqami {customer.telefon}. O'zingiz aytib qo'ying."})
+        
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message
+    }
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            return json.dumps({"muvaffaqiyat": "Xabar muvaffaqiyatli yuborildi!"})
+        else:
+            return json.dumps({"xato": f"Telegram xatosi: {response.text}"})
+    except Exception as e:
+        return json.dumps({"xato": f"Tarmoq xatosi: {str(e)}"})
+
 @ai_assistant_bp.route('/ask-voice-audio', methods=['POST'])
 @login_required
 def ask_voice_audio():
@@ -196,8 +262,7 @@ def ask_voice_audio():
     
     try:
         client = OpenAI(api_key=OPENAI_API_KEY)
-        # 1. Ovozni matnga o'girish (Whisper)
-        # Fayl nomiga format berish shart
+        # 1. Whisper STT
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
             file=("voice.webm", audio_file.read())
@@ -209,55 +274,119 @@ def ask_voice_audio():
     if not user_query.strip():
         return jsonify({'error': 'Ovozingizni tushunib bo\'lmadi. Qaytadan gapiring.'}), 400
 
+    # Boshlang'ich qisqacha ma'lumotlar (Kontekst)
     today = uz_datetime().date()
-
-    customers = Customer.query.filter(Customer.status == 'faol', Customer.jami_qarz > 0).all()
-    debtors_text = ", ".join([f"{c.nomi}: {format_num(c.jami_qarz)} so'm" for c in customers])
-    
     today_sales = Sale.query.filter(Sale.sana == today).all()
     total_sales = sum(s.jami_summa for s in today_sales)
-    sales_info = {}
-    for s in today_sales:
-        mijoz_nomi = s.customer.nomi if s.customer else "Noma'lum"
-        if mijoz_nomi not in sales_info:
-            sales_info[mijoz_nomi] = {}
-        if s.non_turi not in sales_info[mijoz_nomi]:
-            sales_info[mijoz_nomi][s.non_turi] = 0
-        sales_info[mijoz_nomi][s.non_turi] += s.miqdor
-
-    sales_text = ""
-    for mijoz, nonlar in sales_info.items():
-        sales_text += f"{mijoz} bugun oldi: "
-        for nt, mq in nonlar.items():
-            sales_text += f"{mq} ta {nt}, "
-        sales_text += "; "
 
     prompt = f"""
-    Sen Sanjar Patir nonvoyxonasining aqlli ovozli yordamchisisan.
-    Foydalanuvchi senga audio orqali quyidagi gapni aytdi (bu yozuv avtomatik o'girilgan): "{user_query}"
-    
-    Ma'lumotlar bazasidagi joriy qisqacha ma'lumotlar:
-    - Mijozlarning umumiy qarzlari: {debtors_text}
-    - Bugungi sotuvlar tafsiloti (kim nima oldi): {sales_text}
-    - Bugungi jami savdo: {format_num(total_sales)} so'm
+    Sen Sanjar Patir nonvoyxonasining Haqiqiy Menejeri va Amaliyotchi Agentisan (Action Agent).
+    Bugungi kun: {today}
+    Bugungi jami savdo: {format_num(total_sales)} so'm.
+    Foydalanuvchi quyidagi gapni gapirdi: "{user_query}"
     
     Qoidalar:
-    1. Savolga o'ta aniq, insoniy va juda qisqa javob ber. Ovozli yordamchi bo'lganing uchun suhbatdosh sifatida muloyim va jonli javob qaytar.
-    2. Keraksiz so'zlarni, belgilarni (*, #) umuman ishlatma.
-    3. Javobni faqat o'zbek tilida ber.
+    1. Agar foydalanuvchi birovning qarzini so'rasa, bazadan izlash funksiyasini chaqir.
+    2. Agar kimgadir telegramdan yoz, eslatma yubor desa, telegram xabar funksiyasini chaqir.
+    3. Javobing insoniy, qisqa va londa bo'lsin.
+    4. Raqamlarni chiroyli gapir.
     """
 
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_customer_debt",
+                "description": "Bazada mijozning qarzi bor-yo'qligini tekshiradi.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "customer_name": {"type": "string", "description": "Mijoz ismi"}
+                    },
+                    "required": ["customer_name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_customer_sales",
+                "description": "Mijoz ma'lum kunda (masalan bugun) nima olganini topadi.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "customer_name": {"type": "string", "description": "Mijoz ismi"},
+                        "date_str": {"type": "string", "description": "Sana YYYY-MM-DD. Bo'sh bo'lsa bugun."}
+                    },
+                    "required": ["customer_name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "send_telegram_message",
+                "description": "Mijozning Telegram guruhiga xabar yuboradi.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "customer_name": {"type": "string", "description": "Mijoz ismi"},
+                        "message": {"type": "string", "description": "Xabar matni"}
+                    },
+                    "required": ["customer_name", "message"]
+                }
+            }
+        }
+    ]
+
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": user_query}
+    ]
+
     try:
-        # 2. Matnli javobni tayyorlash (GPT-4o-mini)
+        # GPT-4o-mini with tools
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": prompt}
-            ]
+            messages=messages,
+            tools=tools,
+            tool_choice="auto"
         )
-        ai_text = completion.choices[0].message.content
         
-        # 3. Matnni Ovozga aylantirish (TTS - Nova ovozi, HD sifat)
+        response_message = completion.choices[0].message
+        tool_calls = response_message.tool_calls
+        
+        if tool_calls:
+            messages.append(response_message)
+            for tool_call in tool_calls:
+                function_name = tool_call.function.name
+                function_args = json.loads(tool_call.function.arguments)
+                
+                if function_name == "get_customer_debt":
+                    res = get_customer_debt_func(function_args.get("customer_name"))
+                elif function_name == "get_customer_sales":
+                    res = get_customer_sales_func(function_args.get("customer_name"), function_args.get("date_str"))
+                elif function_name == "send_telegram_message":
+                    res = send_telegram_message_func(function_args.get("customer_name"), function_args.get("message"))
+                else:
+                    res = json.dumps({"error": "Unknown function"})
+                    
+                messages.append({
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": function_name,
+                    "content": res,
+                })
+                
+            second_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages
+            )
+            ai_text = second_response.choices[0].message.content
+        else:
+            ai_text = response_message.content
+            
+        # TTS - Nova ovozi
         tts_response = client.audio.speech.create(
             model="tts-1-hd",
             voice="nova",
