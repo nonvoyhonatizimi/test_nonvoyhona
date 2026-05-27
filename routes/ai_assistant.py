@@ -2,6 +2,10 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 from models import db, Sale, Customer, BreadMaking, uz_datetime
 from sqlalchemy import func
+import os
+import io
+import base64
+from openai import OpenAI
 
 ai_assistant_bp = Blueprint('ai_assistant', __name__, url_prefix='/ai')
 
@@ -94,3 +98,86 @@ def ask_ai():
     expert_answer = generate_expert_report(data_package, user_query)
     
     return jsonify({'answer': expert_answer})
+
+@ai_assistant_bp.route('/ask-voice', methods=['POST'])
+@login_required
+def ask_voice():
+    user_query = request.json.get('query', '').strip()
+    if not user_query:
+        return jsonify({'error': 'Savol kiritilmadi'}), 400
+
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
+    # Agar kamida OpenAI kaliti bo'lsa ishlayveradi (GPT-4o-mini va TTS uchun)
+    if not OPENAI_API_KEY:
+        return jsonify({'error': 'API kalitlar kiritilmagan. Iltimos, server sozlamalarini tekshiring.'}), 500
+
+    today = uz_datetime().date()
+
+    customers = Customer.query.filter(Customer.status == 'faol', Customer.jami_qarz > 0).all()
+    debtors_text = ", ".join([f"{c.nomi}: {format_num(c.jami_qarz)} so'm" for c in customers])
+    
+    today_sales = Sale.query.filter(Sale.sana == today).all()
+    total_sales = sum(s.jami_summa for s in today_sales)
+    sales_info = {}
+    for s in today_sales:
+        mijoz_nomi = s.customer.nomi if s.customer else "Noma'lum"
+        if mijoz_nomi not in sales_info:
+            sales_info[mijoz_nomi] = {}
+        if s.non_turi not in sales_info[mijoz_nomi]:
+            sales_info[mijoz_nomi][s.non_turi] = 0
+        sales_info[mijoz_nomi][s.non_turi] += s.miqdor
+
+    sales_text = ""
+    for mijoz, nonlar in sales_info.items():
+        sales_text += f"{mijoz} bugun oldi: "
+        for nt, mq in nonlar.items():
+            sales_text += f"{mq} ta {nt}, "
+        sales_text += "; "
+
+    prompt = f"""
+    Sen Sanjar Patir nonvoyxonasining aqlli ovozli yordamchisisan.
+    Foydalanuvchi quyidagi savolni berdi: "{user_query}"
+    
+    Ma'lumotlar bazasidagi joriy qisqacha ma'lumotlar:
+    - Mijozlarning umumiy qarzlari: {debtors_text}
+    - Bugungi sotuvlar tafsiloti (kim nima oldi): {sales_text}
+    - Bugungi jami savdo: {format_num(total_sales)} so'm
+    
+    Qoidalar:
+    1. Savolga aniq, londa va qisqa javob ber. Ovozli yordamchi bo'lganing uchun xuddi odamdek gaplash.
+    2. Keraksiz so'zlarni, belgilarni (*, #) ishlatma.
+    3. Agar ma'lumot topilmasa, "Kechirasiz, ma'lumot topilmadi" deb ayt.
+    4. Raqamlarni chiroyli va tushunarli o'qilishi uchun imlo va uslubga e'tibor ber.
+    """
+
+    try:
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        
+        # 1. Matnli javobni tayyorlash (GPT-4o-mini)
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": prompt}
+            ]
+        )
+        ai_text = completion.choices[0].message.content
+        
+        # 2. Matnni Ovozga aylantirish (TTS)
+        tts_response = client.audio.speech.create(
+            model="tts-1",
+            voice="alloy",
+            input=ai_text
+        )
+        audio_io = io.BytesIO(tts_response.content)
+        audio_io.seek(0)
+        audio_base64 = base64.b64encode(audio_io.read()).decode('utf-8')
+        
+    except Exception as e:
+        return jsonify({'error': f"OpenAI xatoligi: {str(e)}"}), 500
+
+    return jsonify({
+        'text': ai_text,
+        'audio': audio_base64
+    })

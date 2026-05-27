@@ -167,7 +167,7 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         try {
-            const response = await fetch('{{ url_for("ai_assistant.ask_ai") }}', {
+            const response = await fetch('{{ url_for("ai_assistant.ask_voice") }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: query })
@@ -175,8 +175,21 @@
             const data = await response.json();
             
             chatMessages.removeChild(typingDiv);
-            addMessage(data.answer);
-            speak(data.answer); // Javobni ovoz chiqarib aytish
+            
+            if (data.error) {
+                addMessage("<span class='text-danger'>Xatolik:</span> " + data.error);
+                return;
+            }
+            
+            addMessage(data.text);
+            
+            // OpenAI orqali audio kelsa o'ynatamiz, bo'lmasa eski brauzer ovozidan foydalanamiz
+            if (data.audio) {
+                const audio = new Audio("data:audio/mp3;base64," + data.audio);
+                audio.play();
+            } else {
+                speak(data.text || data.answer); 
+            }
         } catch (error) {
             chatMessages.removeChild(typingDiv);
             addMessage("Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.");
