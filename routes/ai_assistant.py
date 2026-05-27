@@ -280,16 +280,18 @@ def ask_voice_audio():
     total_sales = sum(s.jami_summa for s in today_sales)
 
     prompt = f"""
-    Sen Sanjar Patir nonvoyxonasining Haqiqiy Menejeri va Amaliyotchi Agentisan (Action Agent).
+    Sen "Sanjar Patir" nonvoyxonasining aqlli, chaqqon va xushmuomala yordamchi menejerisan. 
     Bugungi kun: {today}
     Bugungi jami savdo: {format_num(total_sales)} so'm.
     Foydalanuvchi quyidagi gapni gapirdi: "{user_query}"
     
-    Qoidalar:
-    1. Agar foydalanuvchi birovning qarzini so'rasa, bazadan izlash funksiyasini chaqir.
-    2. Agar kimgadir telegramdan yoz, eslatma yubor desa, telegram xabar funksiyasini chaqir.
-    3. Javobing insoniy, qisqa va londa bo'lsin.
-    4. Raqamlarni chiroyli gapir.
+    Qoidalar va tushunchalar:
+    1. "Kassa qilish so'rovini jo'natish" yoki "qarzini eslatish" degani — mijozning telegramiga pul to'lashi kerakligi haqida xabar jo'natish degani. Buning uchun DOIM 'send_telegram_message' funksiyasini chaqir. Hech qachon o'zingcha "jo'natdim" deb aldamagin, albatta funksiyani ishlat!
+    2. Agar kimgadir telegramdan xabar yoz desa ham, shu funksiyani chaqir.
+    3. Agar kimningdir qarzini yoki bugungi savdosini so'rasa, 'get_customer_debt' yoki 'get_customer_sales' ni chaqir.
+    4. JAVOBING JUDA TABIIY, INSONIY VA QISQA BO'LSIN. Xuddi tirik odamdek, ortiqcha rasmiyatchiliksiz, samimiy javob qaytar. 
+    5. Agar funksiya xato qaytarsa (masalan telegram id yo'q desa), buni foydalanuvchiga tabiiy tilda "Uning telegrami ulanmagan ekan, nomeriga telefon qilaqolaylikmi?" kabi tushuntir.
+    6. Raqamlarni so'zda chiroyli ayt. Keraksiz yulduzchalar (*), panjaralar (#) ishlatma.
     """
 
     tools = [
@@ -326,7 +328,7 @@ def ask_voice_audio():
             "type": "function",
             "function": {
                 "name": "send_telegram_message",
-                "description": "Mijozning Telegram guruhiga xabar yuboradi.",
+                "description": "Mijozning Telegram guruhiga xabar yuboradi. Kassa qilish (pul so'rash) haqida so'ralganda ham shundan foydalaniladi.",
                 "parameters": {
                     "type": "object",
                     "properties": {
