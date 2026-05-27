@@ -8,7 +8,8 @@ import json
 sales_bp = Blueprint('sales', __name__, url_prefix='/sales')
 
 # Telegram Bot Configuration
-TELEGRAM_BOT_TOKEN = "8443497785:AAG6UAJIzZv8HCSTKHqmYUe6dYRlIxu-Yn4"
+import os
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
 # Customer to Telegram Group mapping
 CUSTOMER_GROUPS = {
@@ -635,7 +636,7 @@ def add_sale():
                 db.session.add(new_cash)
             
         db.session.add(new_sale)
-        db.session.commit()
+        db.session.flush()  # DB ga yozamiz lekin oxirgi commitgacha saqlamaymiz (id olish uchun)
         
         # Inventorydan non ayirish (original non_turi orqali)
         if xodim_id:
@@ -658,9 +659,9 @@ def add_sale():
                     inv.updated_at = uz_datetime()
             
             if remaining > 0:
-                flash(f'Xatolik: {remaining} dona {non_turi} ayirib bo\'lmadi!', 'error')
-            else:
-                db.session.commit()
+                db.session.rollback()  # Tranzaksiyani bekor qilish
+                flash(f'Xatolik: {remaining} dona {non_turi} ayirib bo\'lmadi! Sotuv bekor qilindi.', 'error')
+                return redirect(url_for('sales.add_sale'))
         
         # Avtomatik Haydovchi to'lovi yaratish
         if qarz > 0 and xodim_id and mijoz_id:
@@ -673,7 +674,8 @@ def add_sale():
                 status='kutilmoqda'
             )
             db.session.add(driver_payment)
-            db.session.commit()
+            
+        db.session.commit() # Hamma narsa joyida bo'lsa, saqlaymiz
             
         # Check debt limits
         if customer:

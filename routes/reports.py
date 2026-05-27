@@ -9,7 +9,8 @@ from datetime import datetime, timedelta
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
 # Telegram Bot Configuration
-TELEGRAM_BOT_TOKEN = "8443497785:AAG6UAJIzZv8HCSTKHqmYUe6dYRlIxu-Yn4"
+import os
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
 # Customer to Telegram Group mapping
 CUSTOMER_GROUPS = {

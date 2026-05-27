@@ -5,6 +5,8 @@ from flask_migrate import Migrate
 from models import db, User, Log, Sale, BreadMaking, Customer, Employee
 from sqlalchemy import func
 from datetime import datetime
+import tempfile
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Load environment variables from .env file for local development
 from dotenv import load_dotenv
@@ -14,9 +16,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'nonvoyhona-secret-key-123')
 
 # Database configuration - uses DATABASE_URL environment variable
-# Render Internal Database (PostgreSQL with pg8000 driver)
-DATABASE_URL = os.environ.get('DATABASE_URL', 
-    'postgresql+pg8000://nonvoyhonatizimi_user:JIPK1bBsLGGiQI04QfCG70cVbPT2VvDb@dpg-d6juhpntskes73b5drl0-a/nonvoyhonatizimi')
+# Render Internal Database (PostgreSQL bilan pg8000), agar yo'q bo'lsa mahalliy SQLite
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///local.db')
 
 # Fix Render's postgres:// to postgresql+pg8000://
 if DATABASE_URL.startswith('postgres://'):
@@ -101,13 +102,23 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(login=username).first()
+        if user:
+            # Hybrid password checking to auto-upgrade plaintext to hashes
+            if user.parol.startswith('pbkdf2:sha256:'):
+                is_valid = check_password_hash(user.parol, password)
+            else:
+                is_valid = (user.parol == password)
+                if is_valid:
+                    # Upgrade automatically
+                    user.parol = generate_password_hash(password)
+                    db.session.commit()
+            
+            if is_valid:
+                login_user(user)
+                log_action("Kirish", "Foydalanuvchi tizimga kirdi")
+                return redirect(url_for('index'))
         
-        if user and user.parol == password: # In real app use hash
-            login_user(user)
-            log_action("Kirish", "Foydalanuvchi tizimga kirdi")
-            return redirect(url_for('index'))
-        else:
-            flash('Login yoki parol xato!')
+        flash('Login yoki parol xato!')
             
     return render_template('login.html')
 
@@ -222,10 +233,11 @@ def init_db():
         # Create or update default admin
         admin = User.query.filter_by(login='rovshanbek').first()
         if not admin:
-            admin = User(login='rovshanbek', parol='19870257', rol='admin', ism='Rovshanbek')
+            admin = User(login='rovshanbek', parol=generate_password_hash('19870257'), rol='admin', ism='Rovshanbek')
             db.session.add(admin)
         else:
-            admin.parol = '19870257'
+            if not admin.parol.startswith('pbkdf2:sha256:'):
+                admin.parol = generate_password_hash('19870257')
         db.session.commit()
         
         # Add all customers from Telegram groups if not exist
@@ -275,12 +287,25 @@ def daily_report_job():
         now = uz_datetime()
         # Kechqurun soat 23:59 da ishlashi uchun
         if now.hour == 23 and now.minute == 59:
-            print("[INFO] Vaqt keldi, kunlik hisobotlar telegramga yuborilmoqda...")
-            with app.app_context():
-                try:
-                    send_daily_sales_reports()
-                except Exception as e:
-                    print(f"[XATO] Daily report error: {e}")
+            # Lock file to prevent duplicate execution across multiple workers
+            lock_file = os.path.join(tempfile.gettempdir(), 'nonvoyhona_daily_report.lock')
+            should_run = True
+            if os.path.exists(lock_file):
+                mtime = os.path.getmtime(lock_file)
+                if time.time() - mtime < 3600: # Agar 1 soat ichida ishlagan bo'lsa
+                    should_run = False
+            
+            if should_run:
+                with open(lock_file, "w") as f:
+                    f.write(str(time.time()))
+                    
+                print("[INFO] Vaqt keldi, kunlik hisobotlar telegramga yuborilmoqda...")
+                with app.app_context():
+                    try:
+                        send_daily_sales_reports()
+                    except Exception as e:
+                        print(f"[XATO] Daily report error: {e}")
+            
             # Bir marta qayta ishlamasligi uchun 62 soniya kutish
             time.sleep(62)
         else:
@@ -300,10 +325,11 @@ if __name__ == '__main__':
         # Create or update default admin
         admin = User.query.filter_by(login='rovshanbek').first()
         if not admin:
-            admin = User(login='rovshanbek', parol='19870257', rol='admin', ism='Rovshanbek')
+            admin = User(login='rovshanbek', parol=generate_password_hash('19870257'), rol='admin', ism='Rovshanbek')
             db.session.add(admin)
         else:
-            admin.parol = '19870257'
+            if not admin.parol.startswith('pbkdf2:sha256:'):
+                admin.parol = generate_password_hash('19870257')
         db.session.commit()
         
         # Add all customers from Telegram groups if not exist
