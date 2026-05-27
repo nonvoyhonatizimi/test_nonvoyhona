@@ -262,10 +262,11 @@ def ask_voice_audio():
     
     try:
         client = OpenAI(api_key=OPENAI_API_KEY)
-        # 1. Whisper STT
+        # 1. Whisper STT - Aniq o'zbek tilida tushunishi uchun
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
-            file=("voice.webm", audio_file.read())
+            file=("voice.webm", audio_file.read()),
+            language="uz"
         )
         user_query = transcript.text
     except Exception as e:
@@ -274,24 +275,53 @@ def ask_voice_audio():
     if not user_query.strip():
         return jsonify({'error': 'Ovozingizni tushunib bo\'lmadi. Qaytadan gapiring.'}), 400
 
-    # Boshlang'ich qisqacha ma'lumotlar (Kontekst)
+    # Boshlang'ich qisqacha ma'lumotlar (To'liq Kontekst)
     today = uz_datetime().date()
+    
+    # Barcha qarzlar ro'yxatini yig'ish (manzili bilan)
+    customers = Customer.query.filter(Customer.status == 'faol', Customer.jami_qarz > 0).all()
+    debtors_text = ", ".join([f"{c.nomi} ({c.manzil or 'manzilsiz'}): {format_num(c.jami_qarz)} so'm" for c in customers])
+    
+    # Bugungi sotuvlar ro'yxatini yig'ish
     today_sales = Sale.query.filter(Sale.sana == today).all()
     total_sales = sum(s.jami_summa for s in today_sales)
+    
+    sales_info = {}
+    for s in today_sales:
+        mijoz_nomi = s.customer.nomi if s.customer else "Noma'lum"
+        if mijoz_nomi not in sales_info:
+            sales_info[mijoz_nomi] = {}
+        if s.non_turi not in sales_info[mijoz_nomi]:
+            sales_info[mijoz_nomi][s.non_turi] = 0
+        sales_info[mijoz_nomi][s.non_turi] += s.miqdor
+
+    sales_text = ""
+    for mijoz, nonlar in sales_info.items():
+        sales_text += f"{mijoz} bugun oldi: "
+        for nt, mq in nonlar.items():
+            sales_text += f"{mq} ta {nt}, "
+        sales_text += "; "
 
     prompt = f"""
-    Sen "Sanjar Patir" nonvoyxonasining aqlli, chaqqon va xushmuomala yordamchi menejerisan. 
+    Sen "Sanjar Patir" nonvoyxonasining eng aqlli, chaqqon va xushmuomala bosh menejerisan. 
+    Sening vazifang - nonvoyxonaning barcha hisob-kitoblari va ma'lumotlarini egasiga yetkazish va mijozlar bilan ishlash.
     Bugungi kun: {today}
+    
+    [BAZA MA'LUMOTLARI]:
     Bugungi jami savdo: {format_num(total_sales)} so'm.
+    Bugun kimlar non olgan (sotuv tafsiloti): {sales_text if sales_text else "Bugun hali hech kim non olmadi."}
+    Mijozlarning umumiy qarzlari (manzillari bilan): {debtors_text if debtors_text else "Qarzlar yo'q."}
+    
     Foydalanuvchi quyidagi gapni gapirdi: "{user_query}"
     
     Qoidalar va tushunchalar:
-    1. "Kassa qilish so'rovini jo'natish" yoki "qarzini eslatish" degani — mijozning telegramiga pul to'lashi kerakligi haqida xabar jo'natish degani. Buning uchun DOIM 'send_telegram_message' funksiyasini chaqir. Hech qachon o'zingcha "jo'natdim" deb aldamagin, albatta funksiyani ishlat!
-    2. Agar kimgadir telegramdan xabar yoz desa ham, shu funksiyani chaqir.
-    3. Agar kimningdir qarzini yoki bugungi savdosini so'rasa, 'get_customer_debt' yoki 'get_customer_sales' ni chaqir.
-    4. JAVOBING JUDA TABIIY, INSONIY VA QISQA BO'LSIN. Xuddi tirik odamdek, ortiqcha rasmiyatchiliksiz, samimiy javob qaytar. 
-    5. Agar funksiya xato qaytarsa (masalan telegram id yo'q desa), buni foydalanuvchiga tabiiy tilda "Uning telegrami ulanmagan ekan, nomeriga telefon qilaqolaylikmi?" kabi tushuntir.
-    6. Raqamlarni so'zda chiroyli ayt. Keraksiz yulduzchalar (*), panjaralar (#) ishlatma.
+    1. FAQAT VA FAQAT sof o'zbek tilida gapir! Turkcha, ruschaga umuman aralashtirma.
+    2. "Kassa qilish so'rovini jo'natish" yoki "qarzini eslatish" degani — mijozning telegramiga pul to'lashi kerakligi haqida xabar jo'natish degani. Buning uchun DOIM 'send_telegram_message' funksiyasini chaqir. Hech qachon o'zingcha "jo'natdim" deb aldamagin, albatta funksiyani ishlat!
+    3. Agar kimgadir telegramdan xabar yoz desa ham, shu funksiyani chaqir.
+    4. Sen barcha ma'lumotlarga egasan. Agar joy (manzil) yoki mijoz haqida so'rasa, tepadagi [BAZA MA'LUMOTLARI] ga qarab darhol javob ber. Hech qachon "Ma'lumot topilmadi" deb bahona qilma, qarzlar yoki sotuvlar orasidan topishga harakat qil.
+    5. JAVOBING JUDA TABIIY, INSONIY VA QISQA BO'LSIN. Xuddi tirik odamdek, ortiqcha rasmiyatchiliksiz, samimiy javob qaytar. 
+    6. Agar funksiya xato qaytarsa (masalan telegram id yo'q desa), buni foydalanuvchiga tabiiy tilda "Uning telegrami ulanmagan ekan, telefon qilaqolaylikmi?" kabi tushuntir.
+    7. Raqamlarni so'zda chiroyli ayt. Keraksiz yulduzchalar (*), panjaralar (#) ishlatma.
     """
 
     tools = [
