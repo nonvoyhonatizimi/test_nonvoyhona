@@ -181,3 +181,97 @@ def ask_voice():
         'text': ai_text,
         'audio': audio_base64
     })
+
+@ai_assistant_bp.route('/ask-voice-audio', methods=['POST'])
+@login_required
+def ask_voice_audio():
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+    if not OPENAI_API_KEY:
+        return jsonify({'error': 'API kalitlar kiritilmagan. Iltimos, server sozlamalarini tekshiring.'}), 500
+
+    if 'audio' not in request.files:
+        return jsonify({'error': 'Audio fayl topilmadi'}), 400
+
+    audio_file = request.files['audio']
+    
+    try:
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        # 1. Ovozni matnga o'girish (Whisper)
+        # Fayl nomiga format berish shart
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=("voice.webm", audio_file.read())
+        )
+        user_query = transcript.text
+    except Exception as e:
+        return jsonify({'error': f"Ovozni tushunishda xatolik (Whisper): {str(e)}"}), 500
+
+    if not user_query.strip():
+        return jsonify({'error': 'Ovozingizni tushunib bo\'lmadi. Qaytadan gapiring.'}), 400
+
+    today = uz_datetime().date()
+
+    customers = Customer.query.filter(Customer.status == 'faol', Customer.jami_qarz > 0).all()
+    debtors_text = ", ".join([f"{c.nomi}: {format_num(c.jami_qarz)} so'm" for c in customers])
+    
+    today_sales = Sale.query.filter(Sale.sana == today).all()
+    total_sales = sum(s.jami_summa for s in today_sales)
+    sales_info = {}
+    for s in today_sales:
+        mijoz_nomi = s.customer.nomi if s.customer else "Noma'lum"
+        if mijoz_nomi not in sales_info:
+            sales_info[mijoz_nomi] = {}
+        if s.non_turi not in sales_info[mijoz_nomi]:
+            sales_info[mijoz_nomi][s.non_turi] = 0
+        sales_info[mijoz_nomi][s.non_turi] += s.miqdor
+
+    sales_text = ""
+    for mijoz, nonlar in sales_info.items():
+        sales_text += f"{mijoz} bugun oldi: "
+        for nt, mq in nonlar.items():
+            sales_text += f"{mq} ta {nt}, "
+        sales_text += "; "
+
+    prompt = f"""
+    Sen Sanjar Patir nonvoyxonasining aqlli ovozli yordamchisisan.
+    Foydalanuvchi senga audio orqali quyidagi gapni aytdi (bu yozuv avtomatik o'girilgan): "{user_query}"
+    
+    Ma'lumotlar bazasidagi joriy qisqacha ma'lumotlar:
+    - Mijozlarning umumiy qarzlari: {debtors_text}
+    - Bugungi sotuvlar tafsiloti (kim nima oldi): {sales_text}
+    - Bugungi jami savdo: {format_num(total_sales)} so'm
+    
+    Qoidalar:
+    1. Savolga o'ta aniq, insoniy va juda qisqa javob ber. Ovozli yordamchi bo'lganing uchun suhbatdosh sifatida muloyim va jonli javob qaytar.
+    2. Keraksiz so'zlarni, belgilarni (*, #) umuman ishlatma.
+    3. Javobni faqat o'zbek tilida ber.
+    """
+
+    try:
+        # 2. Matnli javobni tayyorlash (GPT-4o-mini)
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": prompt}
+            ]
+        )
+        ai_text = completion.choices[0].message.content
+        
+        # 3. Matnni Ovozga aylantirish (TTS - Nova ovozi, HD sifat)
+        tts_response = client.audio.speech.create(
+            model="tts-1-hd",
+            voice="nova",
+            input=ai_text
+        )
+        audio_io = io.BytesIO(tts_response.content)
+        audio_io.seek(0)
+        audio_base64 = base64.b64encode(audio_io.read()).decode('utf-8')
+        
+    except Exception as e:
+        return jsonify({'error': f"AI xatoligi: {str(e)}"}), 500
+
+    return jsonify({
+        'user_query': user_query,
+        'text': ai_text,
+        'audio': audio_base64
+    })
