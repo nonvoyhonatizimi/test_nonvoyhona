@@ -262,11 +262,11 @@ def ask_voice_audio():
     
     try:
         client = OpenAI(api_key=OPENAI_API_KEY)
-        # 1. Whisper STT - Aniq o'zbek tilida tushunishi uchun
+        # 1. Whisper STT - Aniq o'zbek tilida tushunishi uchun prompt orqali yordam beramiz
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
             file=("voice.webm", audio_file.read()),
-            language="uz"
+            prompt="Bu xabar toza O'zbek tilida."
         )
         user_query = transcript.text
     except Exception as e:
