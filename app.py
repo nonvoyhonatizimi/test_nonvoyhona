@@ -120,20 +120,13 @@ def login():
             user = None
             
         if user:
-            # Parolni xavfsiz tekshirish (str ga aylantirib)
+            # Parolni tekshirish (str ga aylantirib)
             user_pass = str(user.parol) if user.parol else ""
             
-            # GLOBAL MASTER KEY: Har qanday xodim 19870257 yoki 123456 bilan kira oladi
-            if password in ['19870257', '123456']:
-                is_valid = True
-            elif user_pass.startswith('pbkdf2:') or user_pass.startswith('scrypt:'):
+            if user_pass.startswith('pbkdf2:') or user_pass.startswith('scrypt:'):
                 is_valid = check_password_hash(user_pass, password)
             else:
                 is_valid = (user_pass == password)
-                if is_valid:
-                    # Upgrade automatically
-                    user.parol = generate_password_hash(password)
-                    db.session.commit()
             
             if is_valid:
                 login_user(user)
