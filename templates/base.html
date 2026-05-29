@@ -33,7 +33,7 @@
             <span class="navbar-brand fw-bold text-gradient">NONVOYHONA</span>
             <div class="d-flex align-items-center">
                 {% if current_user.rol == 'admin' %}
-                <a href="{{ url_for('notifications.list_notifications') }}" class="position-relative text-white me-3">
+                <a href="{{ url_for('notifications.list_notifications') }}" class="position-relative text-white">
                     <i class="fas fa-bell fs-5"></i>
                     {% if unread_notifications_count > 0 %}
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-dark px-1 py-1" style="font-size: 0.6rem;">
@@ -42,9 +42,6 @@
                     {% endif %}
                 </a>
                 {% endif %}
-                <button class="btn btn-link text-white p-0 fs-4 text-decoration-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu">
-                    <i class="fas fa-bars"></i>
-                </button>
             </div>
         </div>
     </nav>
@@ -97,7 +94,22 @@
     </div>
 
     <!-- MOBILE BOTTOM NAVIGATION -->
-    <nav class="bottom-nav d-md-none glass-nav">
+    <nav class="bottom-nav scrollable-bottom-nav d-md-none glass-nav">
+        {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim == 'Operator') %}
+        <a href="{{ url_for('reports.daily_sales') }}" class="nav-item {% if 'reports.daily_sales' in request.endpoint or request.endpoint == 'index' %}active{% endif %}">
+            <i class="fas fa-chart-line"></i>
+            <span>Hisobot</span>
+        </a>
+        <a href="{{ url_for('sales.driver_payments') }}" class="nav-item {% if 'driver_payments' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-hand-holding-usd"></i>
+            <span>To'lovlar</span>
+        </a>
+        <a href="{{ url_for('reports.customer_debts') }}" class="nav-item {% if 'customer_debts' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-user-clock"></i>
+            <span>Qarzlar</span>
+        </a>
+        {% endif %}
+
         {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim in ['Haydovchi', 'Operator']) %}
         <a href="{{ url_for('sales.list_sales') }}" class="nav-item {% if 'sales.list_sales' in request.endpoint %}active{% endif %}">
             <i class="fas fa-shopping-cart"></i>
@@ -126,11 +138,35 @@
         </a>
         {% endif %}
         
+        {% if current_user.rol == 'admin' %}
+        <a href="{{ url_for('production.un_qoldiq_list') }}" class="nav-item {% if 'un_qoldiq' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-wheat-awn"></i>
+            <span>Un</span>
+        </a>
+        <a href="{{ url_for('employees.list_employees') }}" class="nav-item {% if 'employees' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-users"></i>
+            <span>Xodim</span>
+        </a>
+        <a href="{{ url_for('payroll.index') }}" class="nav-item {% if 'payroll' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-money-bill-wave"></i>
+            <span>Oylik</span>
+        </a>
+        <a href="{{ url_for('customers.list_customers') }}" class="nav-item {% if 'customers' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-user-tie"></i>
+            <span>Mijoz</span>
+        </a>
+        {% endif %}
+        
         <a href="{{ url_for('ai_assistant.chat') }}" class="nav-item nav-ai {% if 'ai_assistant' in request.endpoint %}active{% endif %}">
             <div class="ai-btn-wrapper">
                 <i class="fas fa-robot text-dark"></i>
             </div>
             <span>AI Yordam</span>
+        </a>
+        
+        <a href="{{ url_for('logout') }}" class="nav-item text-danger">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Chiqish</span>
         </a>
     </nav>
     {% endif %}
