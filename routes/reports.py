@@ -704,6 +704,120 @@ def daily_sales():
                          qarz_tolovlari=qarz_tolovlari,
                          jami_qarz_tolovlari=jami_qarz_tolovlari)
 
+def send_shift_report_to_telegram(smena_id):
+    import os, io, requests
+    from decimal import Decimal
+    from models import Sale, DriverPayment
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    group_id = "-5297054997"
+    if not bot_token:
+        return
+        
+    try:
+        sales = Sale.query.filter_by(smena=smena_id).all()
+        qarz_tolovlari = DriverPayment.query.filter_by(smena=smena_id, status='tolandi').all()
+        
+        jami_naqt = sum((s.tolandi for s in sales), Decimal('0'))
+        jami_qarz = sum((s.qoldiq_qarz for s in sales), Decimal('0'))
+        jami_qarz_tolovlari = sum((p.summa for p in qarz_tolovlari), Decimal('0'))
+        jami_kirim = jami_naqt + jami_qarz_tolovlari
+        
+        driver_naqd = {}
+        for s in sales:
+            driver_name = s.xodim or "Noma'lum"
+            if driver_name not in driver_naqd:
+                driver_naqd[driver_name] = Decimal('0')
+            driver_naqd[driver_name] += Decimal(str(s.tolandi))
+            
+        for p in qarz_tolovlari:
+            collector = p.collector.ism if p.collector else "Admin"
+            if collector not in driver_naqd:
+                driver_naqd[collector] = Decimal('0')
+            driver_naqd[collector] += Decimal(str(p.summa))
+
+        # 1. Matn (SMS)
+        text_msg = f"📊 *SMENA YOPILDI: #{smena_id}*\n\n"
+        text_msg += f"💰 *Jami Kirim:* {jami_kirim:,.0f} so'm\n"
+        text_msg += f"💵 *Bugungi naqd sotuv:* {jami_naqt:,.0f} so'm\n"
+        text_msg += f"💳 *Eski qarzlardan undiruv:* {jami_qarz_tolovlari:,.0f} so'm\n"
+        text_msg += f"📉 *Bugungi tarqatilgan qarz:* {jami_qarz:,.0f} so'm\n\n"
+        
+        text_msg += "👤 *Kassaga topshiriladigan naqd pul (Sotuvchi kesimida):*\n"
+        for drv, amt in driver_naqd.items():
+            if amt > 0:
+                text_msg += f"▪️ {drv}: {amt:,.0f} so'm\n"
+                
+        text_msg += "\n_Batafsil hisobot quyidagi PDF faylda..._"
+        
+        requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={"chat_id": group_id, "text": text_msg, "parse_mode": "Markdown"}
+        )
+        
+        # 2. PDF yaratish
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet
+        
+        pdf_buffer = io.BytesIO()
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        elements.append(Paragraph(f"Smena #{smena_id} - Yakuniy Hisobot", styles['Heading1']))
+        elements.append(Spacer(1, 12))
+        
+        data = [
+            ["Ko'rsatkich", "Summa (so'm)"],
+            ["Jami Kirim (Kassaga)", f"{jami_kirim:,.0f}"],
+            ["Bugungi naqd sotuv", f"{jami_naqt:,.0f}"],
+            ["Eski qarzlardan undiruv", f"{jami_qarz_tolovlari:,.0f}"],
+            ["Bugun tarqatilgan qarz", f"{jami_qarz:,.0f}"]
+        ]
+        
+        t = Table(data, colWidths=[200, 150])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (1,0), colors.grey),
+            ('TEXTCOLOR', (0,0), (1,0), colors.whitesmoke),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0,0), (-1,0), 12),
+            ('BACKGROUND', (0,1), (-1,-1), colors.whitesmoke),
+            ('GRID', (0,0), (-1,-1), 1, colors.black)
+        ]))
+        elements.append(t)
+        elements.append(Spacer(1, 24))
+        
+        elements.append(Paragraph("Haydovchilar Bo'yicha Kassaga Pul Topshirish", styles['Heading2']))
+        elements.append(Spacer(1, 12))
+        
+        d_data = [["Haydovchi / Sotuvchi", "Topshiradigan Naqd (so'm)"]]
+        for drv, amt in driver_naqd.items():
+            if amt > 0:
+                d_data.append([drv, f"{amt:,.0f}"])
+                
+        if len(d_data) > 1:
+            t2 = Table(d_data, colWidths=[200, 150])
+            t2.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (1,0), colors.lightblue),
+                ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                ('GRID', (0,0), (-1,-1), 1, colors.black)
+            ]))
+            elements.append(t2)
+            
+        doc.build(elements)
+        pdf_buffer.seek(0)
+        
+        requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendDocument",
+            data={"chat_id": group_id, "caption": f"Smena #{smena_id} to'liq hisoboti"},
+            files={"document": (f"Smena_{smena_id}_hisobot.pdf", pdf_buffer, "application/pdf")}
+        )
+    except Exception as e:
+        print(f"[ERROR] Shift report send failed: {e}")
+
 @reports_bp.route('/close-day', methods=['POST'])
 @login_required
 def close_day():
@@ -719,6 +833,17 @@ def close_day():
     open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
     
     if open_smena:
+        # Hisobotni fonga (asinxron) jo'natamiz, toki sayt qotib qolmasin
+        import threading
+        current_smena_val = open_smena.smena
+        # Ilova kontekstini saqlash uchun fonga joriy ilovani uzatish kerak
+        # yoki DB ni ichida to'g'ridan-to'g'ri ishlatmaslik kerak. 
+        # Lekin biz Flask context ichida emasmiz, db sessiya xatolik bermasligi uchun 
+        # fonga shunchaki main thread bloklanmasligi uchun app context bilan jo'natish kerak.
+        # Buning uchun eng zo'ri - sinxron tarzda kutib tursin yoki fonga context bersin. 
+        # Kichik so'rov bo'lgani uchun buni to'g'ridan to'g'ri (sinxron) ishlatsak ham 2-3 soniya oladi.
+        send_shift_report_to_telegram(current_smena_val)
+
         # Ochiq smena bor - uni yopish va yangi smena yaratish
         current_smena = open_smena.smena + 1
         open_smena.status = 'yopiq'
