@@ -78,8 +78,10 @@ body {
     border-radius: 0;
     z-index: 1000;
 }
-.desktop-margin {
-    margin-left: 280px;
+@media (min-width: 768px) {
+    .desktop-margin {
+        margin-left: 280px;
+    }
 }
 .sidebar-brand h3 {
     letter-spacing: 2px;
@@ -326,6 +328,38 @@ body {
     color: var(--text-secondary);
     font-weight: 500;
     margin-bottom: 0.5rem;
+}
+
+/* Mobile Typography & Layout Enhancements */
+@media (max-width: 767px) {
+    body, .table {
+        font-size: 1.05rem; /* Make base text much larger */
+    }
+    .table thead th {
+        font-size: 0.95rem;
+    }
+    .btn {
+        font-size: 1.05rem;
+        padding: 0.6rem 1rem;
+    }
+    .btn-sm {
+        font-size: 0.95rem;
+        padding: 0.5rem 0.8rem;
+    }
+    .badge {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
+    }
+    .card-body {
+        padding: 1rem;
+    }
+    .form-control, .form-select {
+        font-size: 1.05rem;
+        padding: 0.8rem 1rem;
+    }
+    .alert {
+        font-size: 1rem;
+    }
 }
 
 /* Buttons */
