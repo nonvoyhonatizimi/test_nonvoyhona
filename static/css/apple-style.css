@@ -333,32 +333,32 @@ body {
 /* Mobile Typography & Layout Enhancements */
 @media (max-width: 767px) {
     body, .table {
-        font-size: 1.05rem; /* Make base text much larger */
+        font-size: 1.25rem; /* Even larger base text */
     }
     .table thead th {
-        font-size: 0.95rem;
+        font-size: 1.1rem;
     }
     .btn {
-        font-size: 1.05rem;
-        padding: 0.6rem 1rem;
+        font-size: 1.2rem;
+        padding: 0.8rem 1.2rem;
     }
     .btn-sm {
-        font-size: 0.95rem;
-        padding: 0.5rem 0.8rem;
+        font-size: 1.1rem;
+        padding: 0.6rem 1rem;
     }
     .badge {
-        font-size: 0.9rem;
-        padding: 0.4rem 0.6rem;
+        font-size: 1.05rem;
+        padding: 0.5rem 0.7rem;
     }
     .card-body {
-        padding: 1rem;
+        padding: 1.2rem;
     }
     .form-control, .form-select {
-        font-size: 1.05rem;
-        padding: 0.8rem 1rem;
+        font-size: 1.2rem;
+        padding: 1rem 1.2rem;
     }
     .alert {
-        font-size: 1rem;
+        font-size: 1.15rem;
     }
 }
 
