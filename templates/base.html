@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Nonvoyhona">
     
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
     {% block extra_head %}{% endblock %}
@@ -356,12 +356,14 @@
         updateClock();
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Unregister service workers if needed
+            // PWA o'rnatish uchun Service Worker ni ishga tushirish
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    for(let registration of registrations) {
-                        registration.unregister();
-                    }
+                navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}")
+                .then(function(reg) {
+                    console.log('Service Worker muvaffaqiyatli ro\'yxatdan o\'tdi!', reg);
+                })
+                .catch(function(err) {
+                    console.log('Service Worker xatosi: ', err);
                 });
             }
             
