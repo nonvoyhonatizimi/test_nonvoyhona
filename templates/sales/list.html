@@ -439,19 +439,22 @@ function updateBulkUI() {
 }
 
 function handleBulkSubmit(event, form) {
-    event.preventDefault(); // iOS dagi bekor qilinish xatosining oldini oladi
-    if (confirm('Tanlangan barcha qarzlarni to\'langan deb belgilaysizmi?')) {
-        let btn = document.getElementById('bulk-pay-btn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> To\'lanmoqda...';
-        btn.classList.remove('text-success');
-        btn.classList.add('text-muted');
-        
-        // UI o'zgarishlari qo'llanilgandan so'ng formani majburan jo'natish
-        setTimeout(function() {
-            form.submit();
-        }, 100);
-    }
+    event.preventDefault(); // Formani vaqtinchalik to'xtatamiz
+    
+    let btn = document.getElementById('bulk-pay-btn');
+    if (btn.disabled) return false; // Ikki marta bosilishining oldini olish
+    
+    // Tugma dizaynini o'zgartiramiz
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> To\'lanmoqda...';
+    btn.classList.remove('text-success');
+    btn.classList.add('text-muted');
+    
+    // confirm() funksiyasi iPhone'da qotirib qo'ygani uchun,
+    // uni umuman olib tashladik. Tugma bosilganda darhol ishlaydi.
+    setTimeout(function() {
+        form.submit();
+    }, 150);
 }
 
 if (selectAll) {
