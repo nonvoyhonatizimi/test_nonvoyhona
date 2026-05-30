@@ -115,6 +115,10 @@
             <i class="fas fa-shopping-cart"></i>
             <span>Sotuv</span>
         </a>
+        <a href="{{ url_for('sales.list_notes') }}" class="nav-item {% if 'list_notes' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-sticky-note"></i>
+            <span>Izoh</span>
+        </a>
         {% endif %}
 
         {% if current_user.rol == 'admin' or (current_user.employee and current_user.employee.lavozim in ['Xamirchi', 'Operator']) %}
@@ -231,6 +235,11 @@
                         <li class="nav-item">
                             <a class="nav-link {% if 'sales.list_sales' in request.endpoint %}active{% endif %}" href="{{ url_for('sales.list_sales') }}">
                                 <div class="icon-box"><i class="fas fa-shopping-cart"></i></div> <span>Sotuv (Yetkazish)</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'sales.list_notes' in request.endpoint %}active{% endif %}" href="{{ url_for('sales.list_notes') }}">
+                                <div class="icon-box"><i class="fas fa-sticky-note"></i></div> <span>Izohlar</span>
                             </a>
                         </li>
                         {% endif %}
