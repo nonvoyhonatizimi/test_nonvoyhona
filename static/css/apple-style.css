@@ -332,6 +332,12 @@ body {
 
 /* Mobile Typography & Layout Enhancements */
 @media (max-width: 767px) {
+    /* OPTIMIZATION: Disable heavy backdrop-filter on mobile to prevent freezing */
+    :root {
+        --glass-blur: none !important;
+        --bg-panel: rgba(25, 27, 33, 0.98) !important;
+    }
+
     body, .table {
         font-size: 1.8rem; /* Extremely massive base text */
     }
