@@ -62,131 +62,6 @@ def generate_expert_report(data, query):
 def chat():
     return render_template('ai_assistant/chat.html')
 
-@ai_assistant_bp.route('/ask', methods=['POST'])
-@login_required
-def ask_ai():
-    user_query = request.json.get('query', '').strip()
-    today = uz_datetime().date()
-
-    # Ma'lumotlarni yig'ish
-    today_sales = Sale.query.filter(Sale.sana == today).all()
-    total_sales = sum(s.jami_summa for s in today_sales)
-    total_paid = sum(s.tolandi for s in today_sales)
-    new_debt = sum(s.qoldiq_qarz for s in today_sales)
-    
-    bread_analysis = {}
-    for s in today_sales:
-        if s.non_turi not in bread_analysis: bread_analysis[s.non_turi] = {'miqdor': 0, 'summa': 0}
-        bread_analysis[s.non_turi]['miqdor'] += s.miqdor
-        bread_analysis[s.non_turi]['summa'] += s.jami_summa
-    
-    driver_stats = {}
-    for s in today_sales:
-        name = s.xodim if s.xodim else "Admin"
-        if name not in driver_stats: driver_stats[name] = {'count': 0, 'summa': 0}
-        driver_stats[name]['count'] += s.miqdor
-        driver_stats[name]['summa'] += s.jami_summa
-
-    total_debt = db.session.query(func.sum(Customer.jami_qarz)).scalar() or 0
-    top_debtors = Customer.query.filter(Customer.jami_qarz > 0).order_by(Customer.jami_qarz.desc()).limit(10).all()
-    debtor_info = "\n".join([f"- {c.nomi} ({format_num(c.jami_qarz)} so'm)" for c in top_debtors])
-    total_produced = db.session.query(func.sum(BreadMaking.sof_non)).filter(BreadMaking.sana == today).scalar() or 0
-
-    data_package = {
-        'today': today, 'total_sales': total_sales, 'total_paid': total_paid, 
-        'new_debt': new_debt, 'bread_analysis': bread_analysis, 
-        'driver_stats': driver_stats, 'total_debt': total_debt, 
-        'debtor_info': debtor_info, 'total_produced': total_produced
-    }
-
-    # Expert tizim orqali javobni tayyorlash (Hech qanday 403 xatosisiz)
-    expert_answer = generate_expert_report(data_package, user_query)
-    
-    return jsonify({'answer': expert_answer})
-
-@ai_assistant_bp.route('/ask-voice', methods=['POST'])
-@login_required
-def ask_voice():
-    user_query = request.json.get('query', '').strip()
-    if not user_query:
-        return jsonify({'error': 'Savol kiritilmadi'}), 400
-
-    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
-
-    # Agar kamida OpenAI kaliti bo'lsa ishlayveradi (GPT-4o-mini va TTS uchun)
-    if not OPENAI_API_KEY:
-        return jsonify({'error': 'API kalitlar kiritilmagan. Iltimos, server sozlamalarini tekshiring.'}), 500
-
-    today = uz_datetime().date()
-
-    customers = Customer.query.filter(Customer.status == 'faol', Customer.jami_qarz > 0).all()
-    debtors_text = ", ".join([f"{c.nomi}: {format_num(c.jami_qarz)} so'm" for c in customers])
-    
-    today_sales = Sale.query.filter(Sale.sana == today).all()
-    total_sales = sum(s.jami_summa for s in today_sales)
-    sales_info = {}
-    for s in today_sales:
-        mijoz_nomi = s.customer.nomi if s.customer else "Noma'lum"
-        if mijoz_nomi not in sales_info:
-            sales_info[mijoz_nomi] = {}
-        if s.non_turi not in sales_info[mijoz_nomi]:
-            sales_info[mijoz_nomi][s.non_turi] = 0
-        sales_info[mijoz_nomi][s.non_turi] += s.miqdor
-
-    sales_text = ""
-    for mijoz, nonlar in sales_info.items():
-        sales_text += f"{mijoz} bugun oldi: "
-        for nt, mq in nonlar.items():
-            sales_text += f"{mq} ta {nt}, "
-        sales_text += "; "
-
-    prompt = f"""
-    Sen Sanjar Patir nonvoyxonasining aqlli ovozli yordamchisisan.
-    Foydalanuvchi quyidagi savolni berdi: "{user_query}"
-    
-    Ma'lumotlar bazasidagi joriy qisqacha ma'lumotlar:
-    - Mijozlarning umumiy qarzlari: {debtors_text}
-    - Bugungi sotuvlar tafsiloti (kim nima oldi): {sales_text}
-    - Bugungi jami savdo: {format_num(total_sales)} so'm
-    
-    Qoidalar:
-    1. Savolga aniq, londa va qisqa javob ber. Ovozli yordamchi bo'lganing uchun xuddi odamdek gaplash.
-    2. Keraksiz so'zlarni, belgilarni (*, #) ishlatma.
-    3. Agar ma'lumot topilmasa, "Kechirasiz, ma'lumot topilmadi" deb ayt.
-    4. Raqamlarni chiroyli va tushunarli o'qilishi uchun imlo va uslubga e'tibor ber.
-    """
-
-    try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        
-        # 1. Matnli javobni tayyorlash (GPT-4o-mini)
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": prompt}
-            ]
-        )
-        ai_text = completion.choices[0].message.content
-        
-        # 2. Matnni Ovozga aylantirish (TTS)
-        tts_response = client.audio.speech.create(
-            model="tts-1",
-            voice="alloy",
-            input=ai_text
-        )
-        audio_io = io.BytesIO(tts_response.content)
-        audio_io.seek(0)
-        audio_base64 = base64.b64encode(audio_io.read()).decode('utf-8')
-        
-    except Exception as e:
-        return jsonify({'error': f"OpenAI xatoligi: {str(e)}"}), 500
-
-    return jsonify({
-        'text': ai_text,
-        'audio': audio_base64
-    })
-
 import json
 import requests
 from datetime import datetime
@@ -194,7 +69,7 @@ from datetime import datetime
 def get_customer_debt_func(customer_name):
     customer = Customer.query.filter(Customer.nomi.ilike(f"%{customer_name}%")).first()
     if customer:
-        return json.dumps({"mijoz": customer.nomi, "qarz": format_num(customer.jami_qarz) + " so'm"})
+        return json.dumps({"mijoz": customer.nomi, "qarz": format_num(customer.jami_qarz) + " so'm", "telefon": customer.telefon})
     return json.dumps({"xato": f"'{customer_name}' ismli mijoz topilmadi."})
 
 def get_customer_sales_func(customer_name, date_str=None):
@@ -212,7 +87,7 @@ def get_customer_sales_func(customer_name, date_str=None):
         
     sales = Sale.query.filter(Sale.mijoz_id == customer.id, Sale.sana == target_date).all()
     if not sales:
-        return json.dumps({"xabar": f"{customer.nomi} uchun {target_date} sanasida hech qanday savdo topilmadi."})
+        return json.dumps({"xabar": f"{customer.nomi} uchun {target_date} sanasida savdo topilmadi."})
         
     total_sales = sum(s.jami_summa for s in sales)
     details = {}
@@ -240,10 +115,7 @@ def send_telegram_message_func(customer_name, message):
         return json.dumps({"xato": f"'{customer.nomi}' uchun Telegram chat ID kiritilmagan. Uning raqami {customer.telefon}. O'zingiz aytib qo'ying."})
         
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message
-    }
+    payload = {"chat_id": chat_id, "text": message}
     try:
         response = requests.post(url, json=payload)
         if response.status_code == 200:
@@ -253,136 +125,102 @@ def send_telegram_message_func(customer_name, message):
     except Exception as e:
         return json.dumps({"xato": f"Tarmoq xatosi: {str(e)}"})
 
-@ai_assistant_bp.route('/ask-voice-audio', methods=['POST'])
-@login_required
-def ask_voice_audio():
+def get_daily_summary_func():
+    today = uz_datetime().date()
+    today_sales = Sale.query.filter(Sale.sana == today).all()
+    total_sales = sum(s.jami_summa for s in today_sales)
+    total_paid = sum(s.tolandi for s in today_sales)
+    new_debt = sum(s.qoldiq_qarz for s in today_sales)
+    total_produced = db.session.query(func.sum(BreadMaking.sof_non)).filter(BreadMaking.sana == today).scalar() or 0
+    
+    return json.dumps({
+        "sana": str(today),
+        "jami_sotuv_summasi": format_num(total_sales) + " so'm",
+        "kassaga_tushgan_naqd": format_num(total_paid) + " so'm",
+        "yangi_qarzlar": format_num(new_debt) + " so'm",
+        "ishlab_chiqarilgan_non": f"{total_produced} dona"
+    })
+
+def process_ai_query(user_query, is_voice=False):
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
     if not OPENAI_API_KEY:
-        return jsonify({'error': 'API kalitlar kiritilmagan. Iltimos, server sozlamalarini tekshiring.'}), 500
+        return "Kechirasiz, OpenAI API kaliti kiritilmagan.", None
 
-    if 'audio' not in request.files:
-        return jsonify({'error': 'Audio fayl topilmadi'}), 400
-
-    audio_file = request.files['audio']
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    today = uz_datetime().date()
     
-    try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        # 1. Whisper STT - Aniq o'zbek tilida tushunishi uchun prompt orqali yordam beramiz
-        transcript = client.audio.transcriptions.create(
-            model="whisper-1",
-            file=("voice.webm", audio_file.read()),
-            prompt="Bu xabar toza O'zbek tilida."
-        )
-        user_query = transcript.text
-    except Exception as e:
-        return jsonify({'error': f"Ovozni tushunishda xatolik (Whisper): {str(e)}"}), 500
+    prompt = f"""Sen "Sanjar Patir" nonvoyxonasining aqlli, chaqqon va xushmuomala bosh menejerisan (Sun'iy Intellekt).
+Bugungi sana: {today}.
 
-    if not user_query.strip():
-        return jsonify({'error': 'Ovozingizni tushunib bo\'lmadi. Qaytadan gapiring.'}), 400
+Qoidalar:
+1. FAQAT sof o'zbek tilida, xuddi insondek tabiiy va qisqa javob ber.
+2. Mijoz qarzini bilish uchun 'get_customer_debt' dan foydalan.
+3. Mijoz nima olganini bilish uchun 'get_customer_sales' dan foydalan.
+4. Mijozga pul to'lashini eslatish yoki xabar yuborish so'ralsa 'send_telegram_message' dan foydalan. (O'zingcha jo'natdim dema, albatta funksiyani chaqir).
+5. Bugungi umumiy holat, jami savdo, jami qarz, qancha non yasaldiligi so'ralsa 'get_daily_summary' dan foydalan.
+6. Hech qachon "Ma'lumot yo'q" deb o'zingcha xulosa qilma, kerakli funksiyani ishlatib bazani tekshir.
+7. Ovozli o'qilishi uchun qulay bo'lishi kerak, keraksiz belgilar (*, #) ishlatma.
+"""
 
-    try:
-        # Boshlang'ich qisqacha ma'lumotlar (To'liq Kontekst)
-        today = uz_datetime().date()
-        
-        # Barcha qarzlar ro'yxatini yig'ish (manzili bilan)
-        customers = Customer.query.filter(Customer.status == 'faol', Customer.jami_qarz > 0).all()
-        debtors_text = ", ".join([f"{c.nomi} ({c.manzil or 'manzilsiz'}): {format_num(c.jami_qarz)} so'm" for c in customers])
-        
-        # Bugungi sotuvlar ro'yxatini yig'ish
-        today_sales = Sale.query.filter(Sale.sana == today).all()
-        total_sales = sum((s.jami_summa or 0) for s in today_sales)
-        
-        sales_info = {}
-        for s in today_sales:
-            mijoz_nomi = s.customer.nomi if s.customer else "Noma'lum"
-            if mijoz_nomi not in sales_info:
-                sales_info[mijoz_nomi] = {}
-            if s.non_turi not in sales_info[mijoz_nomi]:
-                sales_info[mijoz_nomi][s.non_turi] = 0
-            sales_info[mijoz_nomi][s.non_turi] += (s.miqdor or 0)
-
-        sales_text = ""
-        for mijoz, nonlar in sales_info.items():
-            sales_text += f"{mijoz} bugun oldi: "
-            for nt, mq in nonlar.items():
-                sales_text += f"{mq} ta {nt}, "
-            sales_text += "; "
-
-        prompt = f"""
-        Sen "Sanjar Patir" nonvoyxonasining eng aqlli, chaqqon va xushmuomala bosh menejerisan. 
-        Sening vazifang - nonvoyxonaning barcha hisob-kitoblari va ma'lumotlarini egasiga yetkazish va mijozlar bilan ishlash.
-        Bugungi kun: {today}
-        
-        [BAZA MA'LUMOTLARI]:
-        Bugungi jami savdo: {format_num(total_sales)} so'm.
-        Bugun kimlar non olgan (sotuv tafsiloti): {sales_text if sales_text else "Bugun hali hech kim non olmadi."}
-        Mijozlarning umumiy qarzlari (manzillari bilan): {debtors_text if debtors_text else "Qarzlar yo'q."}
-        
-        Foydalanuvchi quyidagi gapni gapirdi: "{user_query}"
-        
-        Qoidalar va tushunchalar:
-        1. FAQAT VA FAQAT sof o'zbek tilida gapir! Turkcha, ruschaga umuman aralashtirma.
-        2. "Kassa qilish so'rovini jo'natish" yoki "qarzini eslatish" degani — mijozning telegramiga pul to'lashi kerakligi haqida xabar jo'natish degani. Buning uchun DOIM 'send_telegram_message' funksiyasini chaqir. Hech qachon o'zingcha "jo'natdim" deb aldamagin, albatta funksiyani ishlat!
-        3. Agar kimgadir telegramdan xabar yoz desa ham, shu funksiyani chaqir.
-        4. Sen barcha ma'lumotlarga egasan. Agar joy (manzil) yoki mijoz haqida so'rasa, tepadagi [BAZA MA'LUMOTLARI] ga qarab darhol javob ber. Hech qachon "Ma'lumot topilmadi" deb bahona qilma, qarzlar yoki sotuvlar orasidan topishga harakat qil.
-        5. JAVOBING JUDA TABIIY, INSONIY VA QISQA BO'LSIN. Xuddi tirik odamdek, ortiqcha rasmiyatchiliksiz, samimiy javob qaytar. 
-        6. Agar funksiya xato qaytarsa (masalan telegram id yo'q desa), buni foydalanuvchiga tabiiy tilda "Uning telegrami ulanmagan ekan, telefon qilaqolaylikmi?" kabi tushuntir.
-        7. Raqamlarni so'zda chiroyli ayt. Keraksiz yulduzchalar (*), panjaralar (#) ishlatma.
-        """
-
-        tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_customer_debt",
-                    "description": "Bazada mijozning qarzi bor-yo'qligini tekshiradi.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "customer_name": {"type": "string", "description": "Mijoz ismi"}
-                        },
-                        "required": ["customer_name"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_customer_sales",
-                    "description": "Mijoz ma'lum kunda (masalan bugun) nima olganini topadi.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "customer_name": {"type": "string", "description": "Mijoz ismi"},
-                            "date_str": {"type": "string", "description": "Sana YYYY-MM-DD. Bo'sh bo'lsa bugun."}
-                        },
-                        "required": ["customer_name"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "send_telegram_message",
-                    "description": "Mijozning Telegram guruhiga xabar yuboradi. Kassa qilish (pul so'rash) haqida so'ralganda ham shundan foydalaniladi.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "customer_name": {"type": "string", "description": "Mijoz ismi"},
-                            "message": {"type": "string", "description": "Xabar matni"}
-                        },
-                        "required": ["customer_name", "message"]
-                    }
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_customer_debt",
+                "description": "Bazada mijozning qarzi bor-yo'qligini tekshiradi.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"customer_name": {"type": "string"}},
+                    "required": ["customer_name"]
                 }
             }
-        ]
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_customer_sales",
+                "description": "Mijoz ma'lum kunda nima olganini topadi.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "customer_name": {"type": "string"},
+                        "date_str": {"type": "string"}
+                    },
+                    "required": ["customer_name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "send_telegram_message",
+                "description": "Mijozning Telegram guruhiga xabar yuboradi.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "customer_name": {"type": "string"},
+                        "message": {"type": "string"}
+                    },
+                    "required": ["customer_name", "message"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_daily_summary",
+                "description": "Bugungi jami sotuv, kassa, qarz va ishlab chiqarish bo'yicha hisobotni beradi.",
+                "parameters": {"type": "object", "properties": {}}
+            }
+        }
+    ]
 
-        messages = [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_query}
-        ]
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": user_query}
+    ]
 
-        # GPT-4o-mini with tools
+    try:
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
@@ -405,6 +243,8 @@ def ask_voice_audio():
                     res = get_customer_sales_func(function_args.get("customer_name"), function_args.get("date_str"))
                 elif function_name == "send_telegram_message":
                     res = send_telegram_message_func(function_args.get("customer_name"), function_args.get("message"))
+                elif function_name == "get_daily_summary":
+                    res = get_daily_summary_func()
                 else:
                     res = json.dumps({"error": "Unknown function"})
                     
@@ -422,20 +262,72 @@ def ask_voice_audio():
             ai_text = second_response.choices[0].message.content
         else:
             ai_text = response_message.content
-            
-        # TTS - Nova ovozi
-        tts_response = client.audio.speech.create(
-            model="tts-1-hd",
-            voice="nova",
-            input=ai_text
-        )
-        audio_io = io.BytesIO(tts_response.content)
-        audio_io.seek(0)
-        audio_base64 = base64.b64encode(audio_io.read()).decode('utf-8')
-        
-    except Exception as e:
-        return jsonify({'error': f"AI xatoligi: {str(e)}"}), 500
 
+        audio_base64 = None
+        if is_voice:
+            tts_response = client.audio.speech.create(
+                model="tts-1-hd",
+                voice="nova",
+                input=ai_text
+            )
+            audio_io = io.BytesIO(tts_response.content)
+            audio_io.seek(0)
+            audio_base64 = base64.b64encode(audio_io.read()).decode('utf-8')
+            
+        return ai_text, audio_base64
+
+    except Exception as e:
+        print(f"AI Error: {str(e)}")
+        return f"Kechirasiz, xatolik yuz berdi: {str(e)}", None
+
+@ai_assistant_bp.route('/ask', methods=['POST'])
+@login_required
+def ask_ai():
+    user_query = request.json.get('query', '').strip()
+    ai_text, _ = process_ai_query(user_query, is_voice=False)
+    return jsonify({'text': ai_text})
+
+@ai_assistant_bp.route('/ask-voice', methods=['POST'])
+@login_required
+def ask_voice():
+    user_query = request.json.get('query', '').strip()
+    if not user_query:
+        return jsonify({'error': 'Savol kiritilmadi'}), 400
+        
+    ai_text, audio_base64 = process_ai_query(user_query, is_voice=True)
+    return jsonify({
+        'text': ai_text,
+        'audio': audio_base64
+    })
+
+@ai_assistant_bp.route('/ask-voice-audio', methods=['POST'])
+@login_required
+def ask_voice_audio():
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+    if not OPENAI_API_KEY:
+        return jsonify({'error': 'API kalitlar kiritilmagan.'}), 500
+
+    if 'audio' not in request.files:
+        return jsonify({'error': 'Audio fayl topilmadi'}), 400
+
+    audio_file = request.files['audio']
+    
+    try:
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=("voice.webm", audio_file.read()),
+            prompt="Bu xabar toza O'zbek tilida."
+        )
+        user_query = transcript.text
+    except Exception as e:
+        return jsonify({'error': f"Ovozni tushunishda xatolik: {str(e)}"}), 500
+
+    if not user_query.strip():
+        return jsonify({'error': 'Ovozingizni tushunib bo\'lmadi.'}), 400
+
+    ai_text, audio_base64 = process_ai_query(user_query, is_voice=True)
+    
     return jsonify({
         'user_query': user_query,
         'text': ai_text,
