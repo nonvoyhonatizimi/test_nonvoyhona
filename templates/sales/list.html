@@ -92,7 +92,7 @@
                             <div class="small opacity-75">Jami to'lov:</div>
                             <div id="selected-total" class="h4 mb-0 fw-bold">0 so'm</div>
                         </div>
-                        <form id="bulk-pay-form" method="POST" action="{{ url_for('sales.bulk_pay_debt') }}" onsubmit="return handleBulkSubmit(this);">
+                        <form id="bulk-pay-form" method="POST" action="{{ url_for('sales.bulk_pay_debt') }}" onsubmit="handleBulkSubmit(event, this);">
                             <input type="hidden" name="sale_ids" id="sale_ids_input">
                             <button type="submit" id="bulk-pay-btn" class="btn btn-light text-success fw-bold px-4 rounded-pill shadow-sm">
                                 <i class="fas fa-money-bill-wave me-2"></i> Tanlanganlarni to'lash
@@ -438,16 +438,20 @@ function updateBulkUI() {
     }
 }
 
-function handleBulkSubmit(form) {
+function handleBulkSubmit(event, form) {
+    event.preventDefault(); // iOS dagi bekor qilinish xatosining oldini oladi
     if (confirm('Tanlangan barcha qarzlarni to\'langan deb belgilaysizmi?')) {
         let btn = document.getElementById('bulk-pay-btn');
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> To\'lanmoqda...';
         btn.classList.remove('text-success');
         btn.classList.add('text-muted');
-        return true;
+        
+        // UI o'zgarishlari qo'llanilgandan so'ng formani majburan jo'natish
+        setTimeout(function() {
+            form.submit();
+        }, 100);
     }
-    return false;
 }
 
 if (selectAll) {
