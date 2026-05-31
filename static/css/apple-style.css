@@ -339,32 +339,32 @@ body {
     }
 
     body, .table {
-        font-size: 1.8rem; /* Extremely massive base text */
+        font-size: 0.95rem; /* Normal base text */
     }
     .table thead th {
-        font-size: 1.5rem;
+        font-size: 0.8rem;
     }
     .btn {
-        font-size: 1.6rem;
-        padding: 1rem 1.6rem;
+        font-size: 0.95rem;
+        padding: 0.5rem 1rem;
     }
     .btn-sm {
-        font-size: 1.4rem;
-        padding: 0.8rem 1.4rem;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
     }
     .badge {
-        font-size: 1.4rem;
-        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
     }
     .card-body {
-        padding: 1.8rem;
+        padding: 1rem;
     }
     .form-control, .form-select {
-        font-size: 1.6rem;
-        padding: 1.2rem 1.4rem;
+        font-size: 0.95rem;
+        padding: 0.6rem 1rem;
     }
     .alert {
-        font-size: 1.5rem;
+        font-size: 0.9rem;
     }
 }
 
