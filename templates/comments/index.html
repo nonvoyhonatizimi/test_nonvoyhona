@@ -45,9 +45,9 @@
                         <div class="d-flex flex-column gap-3">
                             {% for comment in chat_history %}
                             <div class="d-flex w-100 {% if comment.is_from_admin %}justify-content-end{% else %}justify-content-start{% endif %}">
-                                <div class="p-3 rounded {% if comment.is_from_admin %}bg-primary text-white{% else %}bg-white border text-dark shadow-sm{% endif %}" 
-                                     style="max-width: 80%; border-radius: 12px !important;">
-                                    <div class="small fw-bold mb-1 {% if comment.is_from_admin %}opacity-75{% else %}text-primary{% endif %}">
+                                <div class="p-3 rounded shadow-sm" 
+                                     style="max-width: 80%; border-radius: 12px !important; {% if comment.is_from_admin %}background-color: #007AFF; color: #ffffff;{% else %}background-color: #E9ECEF; color: #212529; border: 1px solid #ced4da;{% endif %}">
+                                    <div class="small fw-bold mb-1 opacity-75">
                                         {% if comment.is_from_admin %}Siz (Admin){% else %}{{ selected_customer.nomi }}{% endif %}
                                         <span class="ms-2" style="font-size: 0.75rem;">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
                                     </div>

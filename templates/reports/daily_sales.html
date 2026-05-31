@@ -19,9 +19,9 @@
             </div>
             <div class="col-md-6">
                 {% if current_user.rol == 'admin' %}
-                    <form method="POST" action="{{ url_for('reports.close_day') }}" onsubmit="return confirm('Haqiqatan ham smenani yopmoqchimisiz? Bugungi sotuvlar va Qarz to\'lovlari yangilanadi.')">
-                        <button type="submit" class="btn btn-danger w-100">
-                            <i class="fas fa-exchange-alt"></i> Smenani yopish
+                    <form id="smena-form" method="POST" action="{{ url_for('reports.close_day') }}">
+                        <button type="button" onclick="handleSmenaSubmit(this.form, this)" class="btn btn-danger w-100 fw-bold shadow-sm">
+                            <i class="fas fa-exchange-alt me-2"></i> Smenani yopish
                         </button>
                     </form>
                 {% endif %}
@@ -430,6 +430,18 @@
 {% endfor %}
 
 <script>
+function handleSmenaSubmit(form, btn) {
+    // iPhone'da qotib qolmasligi uchun confirm umuman olib tashlandi
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Yopilmoqda...';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-secondary');
+    
+    setTimeout(function() {
+        form.submit();
+    }, 150);
+}
+
 function filterByDriver(driverId) {
     const url = new URL(window.location.href);
     if (driverId) {

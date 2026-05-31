@@ -75,8 +75,8 @@
                     <div class="d-flex flex-column gap-2">
                         {% for comment in comments %}
                         <div class="d-flex w-100 {% if comment.is_from_admin %}justify-content-start{% else %}justify-content-end{% endif %}">
-                            <div class="p-2 rounded {% if comment.is_from_admin %}bg-white border text-dark{% else %}bg-primary text-white{% endif %}" 
-                                 style="max-width: 80%; border-radius: 12px !important;">
+                            <div class="p-2 rounded shadow-sm" 
+                                 style="max-width: 80%; border-radius: 12px !important; {% if comment.is_from_admin %}background-color: #E9ECEF; color: #212529; border: 1px solid #ced4da;{% else %}background-color: #007AFF; color: #ffffff;{% endif %}">
                                 <div class="small fw-bold mb-1 opacity-75">
                                     {% if comment.is_from_admin %}Admin{% else %}Siz{% endif %} 
                                     <span class="ms-2" style="font-size: 0.7rem;">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
