@@ -225,7 +225,7 @@ def send_debt_notification(customer_id):
         flash("Hech qanday ma'lumot tanlanmadi", "warning")
         return redirect(url_for('reports.customer_debts'))
         
-    # Get sales breakdown grouped by sana and non_turi
+    # Get sales breakdown grouped by sana and non_turi, ordered by sana asc (oldest first)
     sales_breakdown = db.session.query(
         Sale.sana,
         Sale.non_turi,
@@ -236,7 +236,7 @@ def send_debt_notification(customer_id):
     ).filter(
         Sale.mijoz_id == customer.id,
         Sale.qoldiq_qarz > 0
-    ).group_by(Sale.sana, Sale.non_turi).all()
+    ).group_by(Sale.sana, Sale.non_turi).order_by(Sale.sana.asc()).all()
     
     selected_sales = []
     total_qarz_for_selected = Decimal('0')
@@ -252,35 +252,38 @@ def send_debt_notification(customer_id):
         flash("Tanlangan ma'lumotlar bo'yicha qarz topilmadi.", "warning")
         return redirect(url_for('reports.customer_debts'))
 
-    # Build message
-    message = f"""
-QARZ ESLATMASI
-
-Mijoz: {customer.nomi}
-Umumiy qarz holati: {float(customer.jami_qarz):,.0f} so'm
-
-Tanlangan qarzlar tafsiloti:
-"""
+    # Build message (limit list to 15 items to prevent Telegram length limit issues)
+    message = f"<b>QARZ ESLATMASI</b>\n\n"
+    message += f"Mijoz: <b>{customer.nomi}</b>\n"
+    message += f"Umumiy qarz holati: <b>{float(customer.jami_qarz):,.0f} so'm</b>\n\n"
+    message += f"Tanlangan qarzlar tafsiloti:\n"
     
     total_bread_count = 0
     bread_types_count = {}
+    
+    MAX_ITEMS_TO_LIST = 15
+    items_listed = 0
 
     for item in selected_sales:
-        s_date_fmt = item.sana.strftime('%d.%m.%Y') if item.sana else 'Noma`lum'
-        message += f"\nSana: {s_date_fmt} | {item.non_turi}: {item.total_miqdor} dona"
-        message += f"\n   Jami: {Decimal(str(item.total_summa)):,.0f} so'm"
-        message += f"\n   To'landi: {Decimal(str(item.total_tolandi)):,.0f} so'm"
-        message += f"\n   Qarz: {Decimal(str(item.total_qarz)):,.0f} so'm\n"
-
-        # Count totals
         total_bread_count += item.total_miqdor
         bread_types_count[item.non_turi] = bread_types_count.get(item.non_turi, 0) + item.total_miqdor
+        
+        if items_listed < MAX_ITEMS_TO_LIST:
+            s_date_fmt = item.sana.strftime('%d.%m.%Y') if item.sana else 'Noma`lum'
+            message += f"\nSana: {s_date_fmt} | {item.non_turi}: {item.total_miqdor} dona"
+            message += f"\n   Jami: {Decimal(str(item.total_summa)):,.0f} so'm"
+            message += f"\n   To'landi: {Decimal(str(item.total_tolandi)):,.0f} so'm"
+            message += f"\n   Qarz: <b>{Decimal(str(item.total_qarz)):,.0f} so'm</b>\n"
+            items_listed += 1
+            
+    if len(selected_sales) > MAX_ITEMS_TO_LIST:
+        message += f"\n... va yana {len(selected_sales) - MAX_ITEMS_TO_LIST} ta qarzli tranzaksiyalar.\n"
     
     message += f"\nJami olingan non (tanlangan sanalar): {total_bread_count} dona"
     for b_type, count in bread_types_count.items():
         message += f"\n  - {b_type}: {count} dona"
 
-    message += f"\n\nYuqoridagi tanlangan qarzlar jami: {total_qarz_for_selected:,.0f} so'm"
+    message += f"\n\nYuqoridagi tanlangan qarzlar jami: <b>{total_qarz_for_selected:,.0f} so'm</b>"
     message += f"\nIltimos, kassa qiling!"
 
     
