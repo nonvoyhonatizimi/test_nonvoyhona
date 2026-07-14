@@ -283,7 +283,7 @@ def send_debt_notification(customer_id):
     for b_type, count in bread_types_count.items():
         message += f"\n  - {b_type}: {count} dona"
 
-    message += f"\n\nYuqoridagi tanlangan qarzlar jami: <b>{total_qarz_for_selected:,.0f} so'm</b>"
+    message += f"\n\nYuqoridagi tanlangan qarzlar jami: {total_qarz_for_selected:,.0f} so'm"
     message += f"\nIltimos, kassa qiling!"
 
     
@@ -292,8 +292,7 @@ def send_debt_notification(customer_id):
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {
             "chat_id": chat_id,
-            "text": message,
-            "parse_mode": "HTML"
+            "text": message
         }
         response = requests.post(url, json=payload, timeout=5)
         
@@ -739,22 +738,22 @@ def send_shift_report_to_telegram(smena_id):
             driver_naqd[collector] += Decimal(str(p.summa))
 
         # 1. Matn (SMS)
-        text_msg = f"📊 *SMENA YOPILDI: #{smena_id}*\n\n"
-        text_msg += f"💰 *Jami Kirim:* {jami_kirim:,.0f} so'm\n"
-        text_msg += f"💵 *Bugungi naqd sotuv:* {jami_naqt:,.0f} so'm\n"
-        text_msg += f"💳 *Eski qarzlardan undiruv:* {jami_qarz_tolovlari:,.0f} so'm\n"
-        text_msg += f"📉 *Bugungi tarqatilgan qarz:* {jami_qarz:,.0f} so'm\n\n"
+        text_msg = f"📊 SMENA YOPILDI: #{smena_id}\n\n"
+        text_msg += f"💰 Jami Kirim: {jami_kirim:,.0f} so'm\n"
+        text_msg += f"💵 Bugungi naqd sotuv: {jami_naqt:,.0f} so'm\n"
+        text_msg += f"💳 Eski qarzlardan undiruv: {jami_qarz_tolovlari:,.0f} so'm\n"
+        text_msg += f"📉 Bugungi tarqatilgan qarz: {jami_qarz:,.0f} so'm\n\n"
         
-        text_msg += "👤 *Kassaga topshiriladigan naqd pul (Sotuvchi kesimida):*\n"
+        text_msg += "👤 Kassaga topshiriladigan naqd pul (Sotuvchi kesimida):\n"
         for drv, amt in driver_naqd.items():
             if amt > 0:
                 text_msg += f"▪️ {drv}: {amt:,.0f} so'm\n"
                 
-        text_msg += "\n_Batafsil hisobot quyidagi PDF faylda..._"
+        text_msg += "\nBatafsil hisobot quyidagi PDF faylda..."
         
         requests.post(
             f"https://api.telegram.org/bot{bot_token}/sendMessage",
-            json={"chat_id": group_id, "text": text_msg, "parse_mode": "Markdown"}
+            json={"chat_id": group_id, "text": text_msg}
         )
         
         # 2. PDF yaratish

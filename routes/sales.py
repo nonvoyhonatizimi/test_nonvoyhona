@@ -102,8 +102,7 @@ Xodim: {sale_data['xodim']}
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {
             "chat_id": chat_id,
-            "text": message,
-            "parse_mode": "HTML"
+            "text": message
         }
         response = requests.post(url, json=payload, timeout=5)
         
@@ -153,9 +152,9 @@ def check_debt_limit(customer, sale_id=None):
             
             if chat_id:
                 try:
-                    message = f"⚠️ <b>DIQQAT!</b>\n\nHurmatli <b>{customer.nomi}</b>!\nSizning umumiy qarzingiz belgilangan limitdan ({float(customer.kredit_limit):,.0f} so'm) oshib ketdi.\n\n<b>Joriy qarzingiz: {float(customer.jami_qarz):,.0f} so'm.</b>\n\nIltimos, tez orada to'lovni amalga oshiring."
+                    message = f"⚠️ DIQQAT!\n\nHurmatli {customer.nomi}!\nSizning umumiy qarzingiz belgilangan limitdan ({float(customer.kredit_limit):,.0f} so'm) oshib ketdi.\n\nJoriy qarzingiz: {float(customer.jami_qarz):,.0f} so'm.\n\nIltimos, tez orada to'lovni amalga oshiring."
                     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                    payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+                    payload = {"chat_id": chat_id, "text": message}
                     requests.post(url, json=payload, timeout=5)
                 except Exception as e:
                     print(f"[XATO] Telegram notification (debt limit) failed for {customer.nomi}: {e}")
@@ -227,7 +226,7 @@ def send_daily_sales_reports():
             f"💵 To'landi: <b>{total_tolandi_kuni:,.0f} so'm</b>",
             f"📝 Kunlik qarz: <b>{total_qarz_kuni:,.0f} so'm</b>",
             "",
-            f"⚠️ <b>Umumiy qarz: {jami_qarz:,.0f} so'm</b>"
+            f"⚠️ Umumiy qarz: {jami_qarz:,.0f} so'm"
         ])
         
         message = "\n".join(msg_lines)
@@ -237,8 +236,7 @@ def send_daily_sales_reports():
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
             payload = {
                 "chat_id": chat_id,
-                "text": message,
-                "parse_mode": "HTML"
+                "text": message
             }
             requests.post(url, json=payload, timeout=5)
         except Exception as e:
