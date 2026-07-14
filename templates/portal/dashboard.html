@@ -126,7 +126,8 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th class="ps-4">Sana</th>
+                        <th class="ps-4">Sana va Vaqt</th>
+                        <th>Haydovchi</th>
                         <th>Non turi</th>
                         <th>Miqdor</th>
                         <th>Narx</th>
@@ -140,7 +141,10 @@
                     <tr>
                         <td class="ps-4">
                             <div class="fw-bold">{{ sale.sana.strftime('%d.%m.%Y') if sale.sana else 'Noma`lum' }}</div>
-                            <small class="text-muted">{{ sale.created_at.strftime('%H:%M') if sale.created_at else '' }}</small>
+                            <span class="badge bg-secondary" style="font-size: 0.75rem;"><i class="far fa-clock"></i> {{ sale.created_at.strftime('%H:%M') if sale.created_at else '' }}</span>
+                        </td>
+                        <td>
+                            <div class="text-dark fw-bold"><i class="fas fa-truck text-muted me-1"></i> {{ sale.xodim or (sale.employee.ism if sale.employee else 'Noma`lum') }}</div>
                         </td>
                         <td><span class="badge bg-info text-dark">{{ sale.non_turi or '' }}</span></td>
                         <td>{{ sale.miqdor or 0 }} dona</td>
@@ -155,7 +159,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center py-5">
+                        <td colspan="8" class="text-center py-5">
                             <i class="fas fa-shopping-basket fa-3x text-light mb-3"></i>
                             <p class="text-muted">Hozircha xaridlar mavjud emas</p>
                         </td>
