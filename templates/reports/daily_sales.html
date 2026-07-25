@@ -20,7 +20,7 @@
             <div class="col-md-6">
                 {% if current_user.rol == 'admin' %}
                     <form id="smena-form" method="POST" action="{{ url_for('reports.close_day') }}">
-                        <button type="button" onclick="handleSmenaSubmit(this.form, this)" class="btn btn-danger w-100 fw-bold shadow-sm">
+                        <button type="button" onclick="handleSmenaSubmit(this.form, this)" class="btn btn-danger w-100 fw-bold shadow-sm py-3 fs-5" style="border-radius: 15px; margin-top: 10px;">
                             <i class="fas fa-exchange-alt me-2"></i> Smenani yopish
                         </button>
                     </form>

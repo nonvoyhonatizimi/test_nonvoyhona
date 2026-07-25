@@ -71,6 +71,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('reports.customer_debts') }}"><i class="fas fa-user-clock"></i> Mijozlar qarzi</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('comments.index') }}"><i class="fas fa-comments"></i> Chat (Mijozlar)</a>
+                </li>
                 {% endif %}
                 
                 {% if current_user.rol == 'admin' %}
