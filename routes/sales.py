@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from models import db, Sale, Customer, Cash, BreadType, BreadTransfer, Employee, DriverPayment, DriverInventory, DayStatus, Eslatma, uz_datetime, sync_customer_debt, set_customer_debt_total
 from datetime import datetime, date
+from sqlalchemy import func
 import requests
 import json
 
@@ -545,7 +546,8 @@ def add_sale():
             qarz = Decimal('0')
             non_turi_saqlash = f"{non_turi} (Adashilgan)"
         else:
-            mijoz_id = request.form.get('mijoz_id')
+            mijoz_id_raw = request.form.get('mijoz_id')
+            mijoz_id = int(mijoz_id_raw) if mijoz_id_raw and str(mijoz_id_raw).isdigit() else None
             narx = Decimal(str(request.form.get('narx', 0)))
             tolandi_str = request.form.get('tolandi', '0')
             tolandi = Decimal(tolandi_str) if tolandi_str and tolandi_str.strip() else Decimal('0')
@@ -563,7 +565,6 @@ def add_sale():
             check_xodim_id = current_user.employee_id
             
         if check_xodim_id:
-            from sqlalchemy import func
             total_miqdor = db.session.query(
                 func.sum(DriverInventory.miqdor)
             ).filter(
@@ -614,7 +615,7 @@ def add_sale():
             # Add to cash
             if tolandi > 0:
                 last_cash = Cash.query.order_by(Cash.id.desc()).first()
-                current_balance = last_cash.balans if last_cash else 0
+                current_balance = last_cash.balans if last_cash and last_cash.balans is not None else Decimal('0')
                 new_cash = Cash(
                     sana=datetime.now().date(),
                     smena=current_smena,

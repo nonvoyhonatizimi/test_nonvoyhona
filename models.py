@@ -58,6 +58,11 @@ def sync_customer_debt(customer_id):
     """Mijoz jami_qarz ni sotuvlar qoldiq_qarz yig'indisiga tenglashtirish."""
     from decimal import Decimal
     from sqlalchemy import func
+    try:
+        customer_id = int(customer_id)
+    except (TypeError, ValueError):
+        return Decimal('0')
+
     customer = Customer.query.get(customer_id)
     if not customer:
         return Decimal('0')
@@ -79,6 +84,11 @@ def sync_customer_debt(customer_id):
 def set_customer_debt_total(customer_id, new_debt):
     """Admin qo'lda jami qarzni o'zgartirganda sotuvlarni ham moslashtirish (FIFO)."""
     from decimal import Decimal
+    try:
+        customer_id = int(customer_id)
+    except (TypeError, ValueError):
+        return Decimal('0')
+
     new_debt = Decimal(str(new_debt or 0))
     if new_debt < 0:
         new_debt = Decimal('0')
