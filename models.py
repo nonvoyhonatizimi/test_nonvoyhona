@@ -53,6 +53,68 @@ class Customer(db.Model):
     jami_qarz = db.Column(db.Numeric(18, 2), default=0)
     status = db.Column(db.String(20), default='faol')
 
+
+def sync_customer_debt(customer_id):
+    """Mijoz jami_qarz ni sotuvlar qoldiq_qarz yig'indisiga tenglashtirish."""
+    from decimal import Decimal
+    from sqlalchemy import func
+    customer = Customer.query.get(customer_id)
+    if not customer:
+        return Decimal('0')
+    total = db.session.query(func.coalesce(func.sum(Sale.qoldiq_qarz), 0)).filter(
+        Sale.mijoz_id == customer_id
+    ).scalar()
+    total = Decimal(str(total or 0))
+    if total < 0:
+        total = Decimal('0')
+
+    # Sotuvlari bor mijoz — doim sotuvlar yig'indisi asosiy manba
+    has_sales = db.session.query(Sale.id).filter(Sale.mijoz_id == customer_id).first() is not None
+    if has_sales:
+        customer.jami_qarz = total
+    # Sotuv yo'q — qo'lda qo'yilgan jami_qarz ni saqlab qolamiz
+    return customer.jami_qarz or Decimal('0')
+
+
+def set_customer_debt_total(customer_id, new_debt):
+    """Admin qo'lda jami qarzni o'zgartirganda sotuvlarni ham moslashtirish (FIFO)."""
+    from decimal import Decimal
+    new_debt = Decimal(str(new_debt or 0))
+    if new_debt < 0:
+        new_debt = Decimal('0')
+
+    customer = Customer.query.get(customer_id)
+    if not customer:
+        return Decimal('0')
+
+    sales = Sale.query.filter_by(mijoz_id=customer_id).order_by(Sale.sana.asc(), Sale.id.asc()).all()
+    current = sum((Decimal(str(s.qoldiq_qarz or 0)) for s in sales), Decimal('0'))
+
+    if current > new_debt:
+        remaining_reduce = current - new_debt
+        for s in sales:
+            if remaining_reduce <= 0:
+                break
+            q = Decimal(str(s.qoldiq_qarz or 0))
+            if q <= 0:
+                continue
+            reduce_by = min(q, remaining_reduce)
+            s.qoldiq_qarz = q - reduce_by
+            s.tolandi = Decimal(str(s.tolandi or 0)) + reduce_by
+            remaining_reduce -= reduce_by
+    elif current < new_debt:
+        add = new_debt - current
+        if sales:
+            s = sales[-1]
+            s.qoldiq_qarz = Decimal(str(s.qoldiq_qarz or 0)) + add
+        else:
+            # Sotuv yo'q — faqat jami_qarz (keyin sync qilmasdan)
+            customer.jami_qarz = new_debt
+            return new_debt
+
+    return sync_customer_debt(customer_id)
+
+
 class BreadType(db.Model):
     __tablename__ = 'non_turlari'
     id = db.Column(db.Integer, primary_key=True)

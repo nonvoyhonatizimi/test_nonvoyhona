@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Customer, User
+from models import db, Customer, User, Sale, sync_customer_debt
 from datetime import datetime
 
 customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
@@ -8,6 +8,14 @@ customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
 @customers_bp.route('/')
 @login_required
 def list_customers():
+    # Ko'rsatiladigan jami_qarz ni sotuvlar bilan moslashtirish
+    ids_from_sales = {cid for (cid,) in db.session.query(Sale.mijoz_id).filter(
+        Sale.qoldiq_qarz > 0, Sale.mijoz_id.isnot(None)
+    ).distinct().all()}
+    ids_from_jami = {cid for (cid,) in db.session.query(Customer.id).filter(Customer.jami_qarz > 0).all()}
+    for cid in ids_from_sales | ids_from_jami:
+        sync_customer_debt(cid)
+    db.session.commit()
     customers = Customer.query.all()
     return render_template('customers/list.html', customers=customers)
 

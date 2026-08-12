@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from models import db, Sale, Customer, BreadType
+from models import db, Sale, Customer, BreadType, sync_customer_debt
 from sqlalchemy import func
 from datetime import datetime
 
@@ -15,6 +15,8 @@ def dashboard():
         return redirect(url_for('index'))
     
     from models import CustomerComment, Employee
+    sync_customer_debt(current_user.customer_id)
+    db.session.commit()
     customer = Customer.query.get(current_user.customer_id)
     
     # Mijozning barcha sotuvlarini qat'iy tekshirish va olish

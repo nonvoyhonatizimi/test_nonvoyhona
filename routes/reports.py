@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Customer, Sale, Employee, Dough, BreadMaking, Oven, BreadTransfer, DriverInventory, DayStatus, uz_datetime
+from models import db, Customer, Sale, Employee, Dough, BreadMaking, Oven, BreadTransfer, DriverInventory, DayStatus, uz_datetime, sync_customer_debt, set_customer_debt_total
 from sqlalchemy import func
 from decimal import Decimal
 import requests
@@ -67,6 +67,15 @@ CUSTOMER_GROUPS = {
 @login_required
 def customer_debts():
     """Customer debts report with detailed breakdown"""
+    # Qarzli yoki jami_qarz > 0 mijozlarni sotuvlar bilan sinxronlash
+    ids_from_sales = {cid for (cid,) in db.session.query(Sale.mijoz_id).filter(
+        Sale.qoldiq_qarz > 0, Sale.mijoz_id.isnot(None)
+    ).distinct().all()}
+    ids_from_jami = {cid for (cid,) in db.session.query(Customer.id).filter(Customer.jami_qarz > 0).all()}
+    for cid in ids_from_sales | ids_from_jami:
+        sync_customer_debt(cid)
+    db.session.commit()
+    
     # Get all customers with debts
     customers = Customer.query.filter(Customer.jami_qarz > 0).order_by(Customer.jami_qarz.desc()).all()
     
@@ -165,12 +174,10 @@ def pay_selected_debts(customer_id):
                 dates_paid_count += 1
     
     if total_paid > 0:
-        # Mijozning jami qarzini yangilash
+        # Mijozning jami qarzini sotuvlar asosida yangilash
         customer = Customer.query.get(customer_id)
         if customer:
-            customer.jami_qarz = (customer.jami_qarz or Decimal('0')) - total_paid
-            if customer.jami_qarz < 0:
-                customer.jami_qarz = Decimal('0')
+            sync_customer_debt(customer_id)
         
         # Kassaga qo'shish
         from models import Cash
@@ -319,12 +326,12 @@ def edit_debt(customer_id):
         from decimal import Decimal
         new_debt = Decimal(str(request.form.get('new_debt', 0)))
         
-        # Eski qarzni hisobga olib, yangilash
+        # Eski qarzni hisobga olib, sotuvlar bilan birga yangilash
         old_debt = customer.jami_qarz
-        customer.jami_qarz = new_debt
+        set_customer_debt_total(customer_id, new_debt)
         
         db.session.commit()
-        flash(f'{customer.nomi} qarzi {float(old_debt):,.0f} dan {float(new_debt):,.0f} so\'m ga yangilandi!', 'success')
+        flash(f'{customer.nomi} qarzi {float(old_debt):,.0f} dan {float(customer.jami_qarz):,.0f} so\'m ga yangilandi!', 'success')
         return redirect(url_for('reports.customer_debts'))
     
     return render_template('reports/edit_debt.html', customer=customer)

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import db, Sale, Customer, Cash, BreadType, BreadTransfer, Employee, DriverPayment, DriverInventory, DayStatus, Eslatma, uz_datetime
+from models import db, Sale, Customer, Cash, BreadType, BreadTransfer, Employee, DriverPayment, DriverInventory, DayStatus, Eslatma, uz_datetime, sync_customer_debt, set_customer_debt_total
 from datetime import datetime, date
 import requests
 import json
@@ -367,6 +367,7 @@ def bulk_pay_debt():
     
     total_paid = Decimal('0')
     count = 0
+    touched_customers = set()
     
     # Hozirgi ochiq smenani aniqlash
     open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
@@ -386,10 +387,9 @@ def bulk_pay_debt():
         sale.tolandi += payment
         sale.qoldiq_qarz = 0
         
-        # Update customer debt
         customer = Customer.query.get(sale.mijoz_id)
-        if customer:
-            customer.jami_qarz -= payment
+        if sale.mijoz_id:
+            touched_customers.add(sale.mijoz_id)
             
         # Kassaga qo'shish (Xar doim qarz to'langanda)
         last_cash = Cash.query.order_by(Cash.id.desc()).first()
@@ -435,6 +435,9 @@ def bulk_pay_debt():
                 collector_id=current_user.employee_id if current_user.employee_id else None
             )
             db.session.add(new_dp)
+    
+    for cid in touched_customers:
+        sync_customer_debt(cid)
                 
     db.session.commit()
     flash(f'{count} ta qarz uchun jami {float(total_paid):,.0f} so\'m to\'landi!', 'success')
@@ -458,18 +461,16 @@ def pay_debt(sale_id):
             flash('To\'lov miqdori qarzdan katta bo\'lmasligi kerak', 'error')
             return redirect(url_for('sales.pay_debt', sale_id=sale_id))
         
+        # Hozirgi ochiq smenani avval aniqlash
+        open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
+        current_smena = open_smena.smena if open_smena else 1
+        
         # Update sale
         sale.tolandi += payment
         sale.qoldiq_qarz -= payment
         
-        # Update customer debt
         customer = Customer.query.get(sale.mijoz_id)
-        if customer:
-            customer.jami_qarz -= payment
         
-        # Sana tekshirish - bugunmi yoki oldingi kunmi
-        from datetime import date
-        today = date.today()
         # Kassaga qo'shish (Xar doim qarz to'langanda)
         last_cash = Cash.query.order_by(Cash.id.desc()).first()
         current_balance = last_cash.balans if last_cash else Decimal('0')
@@ -493,12 +494,6 @@ def pay_debt(sale_id):
         # Haydovchi to'lovini saqlash
         driver_payment = DriverPayment.query.filter_by(sale_id=sale.id).first()
         
-        # Hozirgi ochiq smenani aniqlash
-        open_smena = DayStatus.query.filter_by(status='ochiq').order_by(DayStatus.id.desc()).first()
-        current_smena = open_smena.smena if open_smena else 1
-        
-        print(f"[DEBUG pay_debt] Sale.smena={sale.smena}, current_smena={current_smena}")
-        
         if driver_payment:
             # Mavjud to'lovni yangilash - MUHIM: smena ni ham yangilaymiz!
             driver_payment.status = 'tolandi'
@@ -507,7 +502,6 @@ def pay_debt(sale_id):
             driver_payment.smena = current_smena  # To'lov qilingan smena
             if current_user.employee_id:
                 driver_payment.collector_id = current_user.employee_id  # Pulni olgan odam
-            print(f"[DEBUG pay_debt] Yangilandi: Sale.smena={sale.smena}, Payment.smena={current_smena}")
         else:
             # Agar mavjud bo'lmasa, yangi yaratamiz
             new_dp = DriverPayment(
@@ -522,7 +516,9 @@ def pay_debt(sale_id):
                 collector_id=current_user.employee_id if current_user.employee_id else None
             )
             db.session.add(new_dp)
-            print(f"[DEBUG pay_debt] Yangi yaratildi: Sale.smena={sale.smena}, Payment.smena={current_smena}")
+        
+        if sale.mijoz_id:
+            sync_customer_debt(sale.mijoz_id)
         
         db.session.commit()
         
@@ -614,9 +610,6 @@ def add_sale():
         customer = None
         if mijoz_id:
             customer = Customer.query.get(mijoz_id)
-            if customer:
-                customer.jami_qarz += qarz
-                customer.oxirgi_sana = datetime.now().date()
         
             # Add to cash
             if tolandi > 0:
@@ -672,6 +665,9 @@ def add_sale():
                 status='kutilmoqda'
             )
             db.session.add(driver_payment)
+            
+        if mijoz_id:
+            sync_customer_debt(mijoz_id)
             
         db.session.commit() # Hamma narsa joyida bo'lsa, saqlaymiz
             
@@ -821,25 +817,13 @@ def edit_sale(id):
                 except Exception as e:
                     print(f"[DEBUG] Soat yangilashda xato: {e}")
         
-        # Update customer debt correctly
-        if old_mijoz_id == new_mijoz_id and new_mijoz_id is not None:
-            customer = Customer.query.get(new_mijoz_id)
-            if customer:
-                customer.jami_qarz = customer.jami_qarz - old_qarz + sale.qoldiq_qarz
-                db.session.add(customer)
-        else:
-            if old_mijoz_id is not None:
-                old_customer = Customer.query.get(old_mijoz_id)
-                if old_customer:
-                    old_customer.jami_qarz -= old_qarz
-                    db.session.add(old_customer)
-                    
-            if new_mijoz_id is not None:
-                new_customer = Customer.query.get(new_mijoz_id)
-                if new_customer:
-                    new_customer.jami_qarz += sale.qoldiq_qarz
-                    db.session.add(new_customer)
-                    check_debt_limit(new_customer, sale.id)
+        # Update customer debt correctly (sotuvlar yig'indisidan)
+        if old_mijoz_id and old_mijoz_id != new_mijoz_id:
+            sync_customer_debt(old_mijoz_id)
+        if new_mijoz_id:
+            sync_customer_debt(new_mijoz_id)
+            if new_mijoz_id != old_mijoz_id:
+                check_debt_limit(Customer.query.get(new_mijoz_id), sale.id)
         
         # Agar to'lov qilingan bo'lsa (tolandi o'zgargan), haydovchi to'lovini ham yangilash
         # (Template-da tahrirlab bo'lmaydi deyilibdi, lekin har ehtimolga qarshi qoldiramiz)
@@ -885,14 +869,11 @@ def delete_sale(id):
         db.session.delete(dp)
     
     # Update customer debt safely
-    if sale.mijoz_id:
-        customer = Customer.query.get(sale.mijoz_id)
-        if customer:
-            customer.jami_qarz -= sale.qoldiq_qarz
-            db.session.add(customer)
+    mijoz_id = sale.mijoz_id
+    customer = Customer.query.get(mijoz_id) if mijoz_id else None
     
     # Delete related cash entry if exists
-    if sale.tolandi > 0 and sale.mijoz_id and customer:
+    if sale.tolandi > 0 and mijoz_id and customer:
         cash_entry = Cash.query.filter(
             Cash.izoh.like(f'%Sotuv: {customer.nomi}%'),
             Cash.kirim == sale.tolandi
@@ -921,6 +902,9 @@ def delete_sale(id):
             db.session.add(new_inv)
 
     db.session.delete(sale)
+    db.session.flush()
+    if mijoz_id:
+        sync_customer_debt(mijoz_id)
     db.session.commit()
     flash('Sotuv ma\'lumoti o\'chirildi va mijoz qarzi yangilandi', 'success')
     return redirect(url_for('sales.list_sales'))
@@ -1195,20 +1179,29 @@ def refresh_driver_payments():
 @login_required
 def collect_payment(id):
     """Haydovchi to'lovini 'to'landi' deb belgilash"""
+    from decimal import Decimal
     payment = DriverPayment.query.get_or_404(id)
     
     if payment.status == 'tolandi':
         flash('Bu to\'lov allaqachon to\'langan!', 'warning')
         return redirect(url_for('sales.driver_payments'))
     
+    pay_amount = Decimal(str(payment.summa or 0))
+    
     # Status ni yangilash
     payment.status = 'tolandi'
     payment.collected_at = datetime.now()
     
-    # Mijoz qarzidan ayrish
+    # Sotuv qarzini ham yangilash (jami_qarz bilan sinxron qolishi uchun)
+    sale = Sale.query.get(payment.sale_id) if payment.sale_id else None
+    if sale and pay_amount > 0:
+        remaining = Decimal(str(sale.qoldiq_qarz or 0))
+        apply = min(pay_amount, remaining) if remaining > 0 else Decimal('0')
+        if apply > 0:
+            sale.tolandi = Decimal(str(sale.tolandi or 0)) + apply
+            sale.qoldiq_qarz = remaining - apply
+    
     customer = Customer.query.get(payment.mijoz_id)
-    if customer:
-        customer.jami_qarz -= payment.summa
     
     # Kassaga qo'shish
     last_cash = Cash.query.order_by(Cash.id.desc()).first()
@@ -1221,6 +1214,10 @@ def collect_payment(id):
         turi='Haydovchi to\'lovi'
     )
     db.session.add(new_cash)
+    
+    if payment.mijoz_id:
+        sync_customer_debt(payment.mijoz_id)
+    
     db.session.commit()
     
     flash(f'To\'lov to\'landi: {payment.summa:,.0f} so\'m', 'success')
